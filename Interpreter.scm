@@ -14,3 +14,8 @@
       ((eq? '/ (front expression)) (quotient (M_value (middle expression)) (M_value (last expression))))
       ((eq? '% (front expression)) (remainder (M_value (middle expression)) (M_value (last expression))))
       (else (error 'unknown "unknown expression")))))
+
+(define interpret
+  (lambda (filename)
+    (parser filename)))
+    
