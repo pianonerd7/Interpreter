@@ -37,17 +37,19 @@
 (define M_assignment
   (lambda (expression state)
     (cond
-      ((eq? (searchVariable (car expression)) #f)))))
+      ((number? (value expression)) (addVariable (variable expression) (value expression) (removeVariable (variable expression) state)))
+      ((list? (value expression)) (addVariable variable (M_value value) (removeVariable (variable expression) state)))
+      (else (error 'unknown "unknown expression")))))
 
-(define condition caar)
-(define body cdar)
+(define condition car)
+(define body cdr)
 
 (define M_state
   (lambda (expression state)
     (cond
       ((null? expression) state)
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
-      ((eq? '= (condition expression)) (M_assignment (cdr expression) state))
+      ((eq? '= (condition expression)) (M_assignment (body expression) state))
       ((eq? 'return (condition expression)) (M_return (body expression)))
       (else (error 'unknown "unknown expression")))))
 
@@ -85,11 +87,13 @@
         state
         (cons (restOfVariables state)(cons (restOfValues state) '())))))
 
+(define 1stExpression car)
+(define restOfExpression cdr)
 (define evaluate
   (lambda (expressions state)
-    (if (null? expressions)
+    (if (null? (1stExpression expressions))
         state
-        (M_state expressions state))))
+        (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state)))))
 
 (define interpret
   (lambda (filename)
