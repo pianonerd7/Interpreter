@@ -18,8 +18,8 @@
 (define M_return
   (lambda (expression state)
     (cond
-      ((list? (car expression)) (M_return (M_value (car expression))))
-      ((number? (car expression)) expression)
+      ((number? (car expression)) (car expression))
+      ((list? (car expression)) (M_return (cons (M_value (car expression)) '()) state))
       (else (searchVariable (car expression) state)))))
 
 
