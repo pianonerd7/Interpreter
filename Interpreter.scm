@@ -89,6 +89,17 @@
         state
         (cons (restOfVariables state)(cons (restOfValues state) '())))))
 
+;(define firstVal car)
+(define hasVariable
+  (lambda (expression)
+    (cond
+      ((null? expression) #f)
+      ((or (number? (car expression)) (eq? '% (car expression))) (hasVariable (cdr expression)))
+      ((or (eq? '+ (car expression)) (eq? '- (car expression))) (hasVariable (cdr expression)))
+      ((or (eq? '* (car expression)) (eq? '/ (car expression))) (hasVariable (cdr expression)))
+      ((or (eq? '( (car expression)) (eq? ') (car expression))) (hasVariable (cdr expression)))
+      (else #t))))
+
 (define 1stExpression car)
 (define restOfExpression cdr)
 (define evaluate
