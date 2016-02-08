@@ -25,14 +25,14 @@
 
 
 (define variable car)
-(define value cadr)
+(define value cdr)
 ;(M_declare '(x) '(()())) --> ((x) (#f))
 ;(M_declare '(x 12) '(()())) --> ((x) (12))
 (define M_declare
   (lambda (expression state)
     (cond
       ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) #f)) (addVariable (variable expression) #f state))
-      ((eq? (searchVariable (variable expression) state) #f) (addVariable (variable expression) (M_value (value expression) state) state))
+      ((eq? (searchVariable (variable expression) state) #f) (addVariable (variable expression) (M_value (car (value expression)) state) state))
       (else (error 'unknown "unknown expression")))))
 
 (define assign_value cadr)
