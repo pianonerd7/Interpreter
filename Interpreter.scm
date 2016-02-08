@@ -22,44 +22,57 @@
       ((list? expression) (M_return (M_value (car expression))))
       (else (number? expression) expression))))
 
+;(M_declare '(x 12) '(()())) --> ((x) (12))
+;(M_declare '(x) '(()())) --> ((x) (#f))
 (define M_declare
   (lambda (expression state)
     (cond
-      ((null? expression) state)
-      ((eq? (leftOperand expression) 'var)
-       ))))
+      ((and (null? (cdr expression)) (eq? (searchVariable (car expression) state) #f)) (addVariable (car expression) #f state))
+      ((eq? (searchVariable (car expression) state) #f) (addVariable (car expression) (car (cdr expression)) state))
+      (else (error 'unknown "unknown expression")))))
 
-(define M_state
+(define M_assignment
   (lambda (expression state)
     (cond
-      ((eq? 'return (car (car expression))) (M_return (cdr (car expression))))
-      ((eq? 
-        )))))
-
-(define searchVariable
-  (lambda (var state)
-    (cond
-    ((null? (car state)) #f)
-    ((eq? (car (car state)) var) (car (car (cdr state))))
-    (else (searchVariable var (removeFirstPair state))))))
-
-(define addVariable
-  (lambda (var value state)
-    (cons (append (car state) (cons var '()))(cons (append (car (cdr state)) (cons value '())) '()))))
-
-(define removeFirstPair
-  (lambda (state)
-    (if (null? (car state))
-        state
-        (cons (cdr (car state))(cons (cdr (car (cdr state))) '())))))
-
-(define evaluate
-  (lambda (expressions state)
-    (if (null? expressions)
-        state
-        (M_state expressions state))))
-
-(define interpret
-  (lambda (filename)
-    (evaluate (parser filename) '(()()))))
-
+      
+      
+      (define M_state
+        (lambda (expression state)
+          (cond
+            ((null? expression) state)
+            ((eq? 'var (car (car expression))) (M_declare (cdr (car expression)) state))
+            ((eq? '= (car (car expression)))
+            ((eq? 'return (car (car expression))) (M_return (cdr (car expression))))
+            (else (error 'unknown "unknown expression")))))
+      
+      ;(searchVariable 'y '((x y z) (1 2 3))) --> 2
+      (define searchVariable
+        (lambda (var state)
+          (cond
+            ((null? (car state)) #f)
+            ((eq? (car (car state)) var) (car (car (cdr state))))
+            (else (searchVariable var (removeFirstPair state))))))
+      
+      ;(addVariable 'x 4 '((z)(1))) --> ((z x) (1 4))
+      (define addVariable
+        (lambda (var value state)
+          (cons (append (car state) (cons var '()))(cons (append (car (cdr state)) (cons value '())) '()))))
+      
+      ;(removeFirstPair '((x y z)(4 5 6))) --> ((y z) (5 6))
+      (define removeFirstPair
+        (lambda (state)
+          (if (null? (car state))
+              state
+              (cons (cdr (car state))(cons (cdr (car (cdr state))) '())))))
+      
+      (define evaluate
+        (lambda (expressions state)
+          (if (null? expressions)
+              state
+              (M_state expressions state))))
+      
+      (define interpret
+        (lambda (filename)
+          (evaluate (parser filename) '(()()))))
+      
+      
