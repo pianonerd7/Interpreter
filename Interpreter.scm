@@ -89,13 +89,6 @@
         state
         (cons (restOfVariables state)(cons (restOfValues state) '())))))
 
-(define isVariable
-  (lambda (val list)
-    (cond
-      ((null? list) #f)
-      ((eq? val (car list)) #t)
-      (else (isVariable val (cdr list))))))
-
 (define 1stExpression car)
 (define restOfExpression cdr)
 (define evaluate
