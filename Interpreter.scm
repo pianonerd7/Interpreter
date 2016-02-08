@@ -3,36 +3,36 @@
 (define operator car)
 (define leftOperand cadr)
 (define rightOperand caddr)
-
+(define (atom? x) (not (or (pair? x) (null? x))))
 (define M_value
-  (lambda (expression)
+  (lambda (expression state)
     (cond
       ((number? expression) expression)
-      ((eq? '+ (operator expression)) (+ (M_value (leftOperand expression)) (M_value (rightOperand expression))))
-      ((eq? '- (operator expression)) (- (M_value (leftOperand expression)) (M_value (rightOperand expression))))
-      ((eq? '* (operator expression)) (* (M_value (leftOperand expression)) (M_value (rightOperand expression))))
-      ((eq? '/ (operator expression)) (quotient (M_value (leftOperand expression)) (M_value (rightOperand expression))))
-      ((eq? '% (operator expression)) (remainder (M_value (leftOperand expression)) (M_value (rightOperand expression))))
+      ((atom? expression) (searchVariable expression state))
+      ((eq? '+ (operator expression)) (+ (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
+      ((eq? '- (operator expression)) (- (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
+      ((eq? '* (operator expression)) (* (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
+      ((eq? '/ (operator expression)) (quotient (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
+      ((eq? '% (operator expression)) (remainder (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
       (else (error 'unknown "unknown expression")))))
 
 (define M_return
   (lambda (expression state)
     (cond
       ((number? (car expression)) (car expression))
-      ((list? (car expression)) (M_return (cons (M_value (car expression)) '()) state))
+      ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
       (else (searchVariable (car expression) state)))))
 
 
 (define variable car)
-(define value cdr)
-;(M_declare '(x 12) '(()())) --> ((x) (12))
+(define value cadr)
 ;(M_declare '(x) '(()())) --> ((x) (#f))
+;(M_declare '(x 12) '(()())) --> ((x) (12))
 (define M_declare
   (lambda (expression state)
     (cond
       ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) #f)) (addVariable (variable expression) #f state))
-      ((and (eq? (searchVariable (variable expression) state) #f) (null? (car (value expression)))) (addVariable (variable expression) (car (value expression)) state))
-      ((eq? (searchVariable (variable expression) state) #f) (addVariable (variable expression) (M_value (car (value expression))) state))
+      ((eq? (searchVariable (variable expression) state) #f) (addVariable (variable expression) (M_value (value expression) state) state))
       (else (error 'unknown "unknown expression")))))
 
 (define assign_value cadr)
