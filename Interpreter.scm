@@ -20,19 +20,47 @@
     (cond
       ((null? expression) '())
       ((list? expression) (M_return (M_value (car expression))))
-      ((number? expression) expression)
-      (else '()))))
+      (else (number? expression) expression))))
+
+(define M_declare
+  (lambda (expression state)
+    (cond
+      ((null? expression) state)
+      ((eq? (leftOperand expression) 'var)
+       ))))
 
 (define M_state
-  (lambda (expression)
+  (lambda (expression state)
     (cond
-      ((eq? 'return (car (car expression))) (M_return (cdr (car expression)))))))
+      ((eq? 'return (car (car expression))) (M_return (cdr (car expression))))
+      ((eq? 
+      )))))
+
+(define searchVariable
+  (lambda (var state)
+    ((null? (car state)))
+    (if (eq? (car (car state)) var)
+        (car (cdr state))
+        (searchVariable var 
+    
+
+    (else (error 'unknown "This variable doesn't exist"))))))
+
+(define removeFirstPair
+  (lambda (state)
+    (cond
+    ((null? (car state)) state)
+    (else (cons (cdr (car state))(cons (cdr (car (cdr state))) '()))))))
+
+;(define addVariable
+  ;search
+  ;add
 
 (define evaluate
   (lambda (expressions state)
     (if (null? expressions)
         state
-        (M_state expressions))))
+        (M_state expressions state))))
 
 (define interpret
   (lambda (filename)
