@@ -16,11 +16,11 @@
       (else (error 'unknown "unknown expression")))))
 
 (define M_return
-  (lambda (expression)
+  (lambda (expression state)
     (cond
-      ((null? expression) '())
-      ((list? expression) (M_return (M_value (car expression))))
-      (else (number? expression) expression))))
+      ((list? (car expression)) (M_return (M_value (car expression))))
+      ((number? (car expression)) expression)
+      (else (searchVariable (car expression) state)))))
 
 
 (define variable car)
@@ -34,11 +34,12 @@
       ((eq? (searchVariable (variable expression) state) #f) (addVariable (variable expression) (car (value expression)) state))
       (else (error 'unknown "unknown expression")))))
 
+(define assign_value cadr)
 (define M_assignment
   (lambda (expression state)
     (cond
-      ((number? (value expression)) (addVariable (variable expression) (value expression) (removeVariable (variable expression) state)))
-      ((list? (value expression)) (addVariable variable (M_value value) (removeVariable (variable expression) state)))
+      ((number? (assign_value expression)) (addVariable (variable expression) (assign_value expression) (removeVariable (variable expression) state)))
+      ((list? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression)) (removeVariable (variable expression) state)))
       (else (error 'unknown "unknown expression")))))
 
 (define condition car)
@@ -50,7 +51,7 @@
       ((null? expression) state)
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
       ((eq? '= (condition expression)) (M_assignment (body expression) state))
-      ((eq? 'return (condition expression)) (M_return (body expression)))
+      ((eq? 'return (condition expression)) (M_return (body expression) state))
       (else (error 'unknown "unknown expression")))))
 
 (define variables car)
@@ -91,7 +92,7 @@
 (define restOfExpression cdr)
 (define evaluate
   (lambda (expressions state)
-    (if (null? (1stExpression expressions))
+    (if (null? expressions)
         state
         (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state)))))
 
