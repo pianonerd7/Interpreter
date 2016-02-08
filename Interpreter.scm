@@ -42,17 +42,16 @@
     ((null? (car state)) #f)
     ((eq? (car (car state)) var) (car (car (cdr state))))
     (else (searchVariable var (removeFirstPair state))))))
-                        
+
+(define addVariable
+  (lambda (var value state)
+    (cons (append (car state) (cons var '()))(cons (append (car (cdr state)) (cons value '())) '()))))
 
 (define removeFirstPair
   (lambda (state)
     (if (null? (car state))
         state
         (cons (cdr (car state))(cons (cdr (car (cdr state))) '())))))
-
-;(define addVariable
-;search
-;add
 
 (define evaluate
   (lambda (expressions state)
