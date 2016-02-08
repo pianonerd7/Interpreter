@@ -31,7 +31,8 @@
   (lambda (expression state)
     (cond
       ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) #f)) (addVariable (variable expression) #f state))
-      ((eq? (searchVariable (variable expression) state) #f) (addVariable (variable expression) (car (value expression)) state))
+      ((and (eq? (searchVariable (variable expression) state) #f) (null? (car (value expression)))) (addVariable (variable expression) (car (value expression)) state))
+      ((eq? (searchVariable (variable expression) state) #f) (addVariable (variable expression) (M_value (car (value expression))) state))
       (else (error 'unknown "unknown expression")))))
 
 (define assign_value cadr)
