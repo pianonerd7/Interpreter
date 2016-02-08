@@ -34,27 +34,25 @@
     (cond
       ((eq? 'return (car (car expression))) (M_return (cdr (car expression))))
       ((eq? 
-      )))))
+        )))))
 
 (define searchVariable
   (lambda (var state)
-    ((null? (car state)))
-    (if (eq? (car (car state)) var)
-        (car (cdr state))
-        (searchVariable var 
-    
-
-    (else (error 'unknown "This variable doesn't exist"))))))
+    (cond
+    ((null? (car state)) #f)
+    ((eq? (car (car state)) var) (car (car (cdr state))))
+    (else (searchVariable var (removeFirstPair state))))))
+                        
 
 (define removeFirstPair
   (lambda (state)
-    (cond
-    ((null? (car state)) state)
-    (else (cons (cdr (car state))(cons (cdr (car (cdr state))) '()))))))
+    (if (null? (car state))
+        state
+        (cons (cdr (car state))(cons (cdr (car (cdr state))) '())))))
 
 ;(define addVariable
-  ;search
-  ;add
+;search
+;add
 
 (define evaluate
   (lambda (expressions state)
