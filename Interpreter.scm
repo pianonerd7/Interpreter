@@ -1,25 +1,25 @@
 (load "simpleParser.scm")
 
-(define front car)
-(define middle cadr)
-(define last caddr)
+(define operator car)
+(define leftOperand cadr)
+(define rightOperand caddr)
 
 (define M_value
   (lambda (expression)
     (cond
       ((number? expression) expression)
-      ((eq? '+ (front expression)) (+ (M_value (middle expression)) (M_value (last expression))))
-      ((eq? '- (front expression)) (- (M_value (middle expression)) (M_value (last expression))))
-      ((eq? '* (front expression)) (* (M_value (middle expression)) (M_value (last expression))))
-      ((eq? '/ (front expression)) (quotient (M_value (middle expression)) (M_value (last expression))))
-      ((eq? '% (front expression)) (remainder (M_value (middle expression)) (M_value (last expression))))
+      ((eq? '+ (operator expression)) (+ (M_value (leftOperand expression)) (M_value (rightOperand expression))))
+      ((eq? '- (operator expression)) (- (M_value (leftOperand expression)) (M_value (rightOperand expression))))
+      ((eq? '* (operator expression)) (* (M_value (leftOperand expression)) (M_value (rightOperand expression))))
+      ((eq? '/ (operator expression)) (quotient (M_value (leftOperand expression)) (M_value (rightOperand expression))))
+      ((eq? '% (operator expression)) (remainder (M_value (leftOperand expression)) (M_value (rightOperand expression))))
       (else (error 'unknown "unknown expression")))))
 
 (define M_return
   (lambda (expression)
     (cond
       ((null? expression) '())
-      ((list? expression) (M_return (car expression)))
+      ((list? expression) (M_return (M_value (car expression))))
       ((number? expression) expression)
       (else '()))))
 
