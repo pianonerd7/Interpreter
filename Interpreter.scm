@@ -44,6 +44,7 @@
     (cond
       ((eq? (searchVariable (variable expression) state) 'empty) (error 'unknown "using before declaring"))
       ((number? (assign_value expression)) (addVariable (variable expression) (assign_value expression) (removeVariable (variable expression) state)))
+      ((eq? (searchVariable (assign_value expression) state) 'empty) (error 'unknown "using before declaring"))
       ((atom? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
       ((list? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
       (else (error 'unknown "unknown expression")))))
