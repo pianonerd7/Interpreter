@@ -40,12 +40,33 @@
   (lambda (expression state)
     (cond
       ((number? (assign_value expression)) (addVariable (variable expression) (assign_value expression) (removeVariable (variable expression) state)))
-      ((list? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression)) (removeVariable (variable expression) state)))
+      ((atom? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
+      ((list? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
+      (else (error 'unknown "unknown expression")))))
+
+(define boolean_operator caar)
+(define leftCondition cadar)
+(define rightCondition caddar)
+(define M_boolean
+  (lambda (expression state)
+    (cond
+      ((null? expression) state)
+      ((atom? expression) (M_value expression state))
+      ((eq? '== (boolean_operator expression)) (eq? (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
+      ((eq? '!= (boolean_operator expression)) (not (eq? (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state))))
+      ((eq? '< (boolean_operator expression)) (< (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
+      ((eq? '> (boolean_operator expression)) (> (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
+      ((eq? '<= (boolean_operator expression)) (<= (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
+      ((eq? '>= (boolean_operator expression)) (>= (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
+      ((eq? '&& (boolean_operator expression)) (and (eq? (M_boolean (leftCondition expression) state) true) (eq? (M_boolean (rightCondition expression) state) true)))
+      ((eq? '|| (boolean_operator expression)) (or (eq? (M_boolean (leftCondition expression) state) true) (eq? (M_boolean (rightCondition expression) state) true)))
+      ((eq? '! (boolean_operator expression)) (not (M_boolean (cdr expression) state)))
       (else (error 'unknown "unknown expression")))))
 
 (define condition car)
 (define body cdr)
-
+(define ifTrueExec caddr)
+(define elseExec cadddr)
 (define M_state
   (lambda (expression state)
     (cond
@@ -53,6 +74,10 @@
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
       ((eq? '= (condition expression)) (M_assignment (body expression) state))
       ((eq? 'return (condition expression)) (M_return (body expression) state))
+      ((eq? 'if (condition expression))
+       (if (M_boolean (body expression) state)
+       (M_state (ifTrueExec expression) state)
+       (M_state (elseExec expression) state)))
       (else (error 'unknown "unknown expression")))))
 
 (define variables car)
