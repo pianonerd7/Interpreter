@@ -42,6 +42,7 @@
 (define M_assignment
   (lambda (expression state)
     (cond
+      ((eq? (searchVariable (variable expression) state) #f) (error 'unknown "using before declaring"))
       ((number? (assign_value expression)) (addVariable (variable expression) (assign_value expression) (removeVariable (variable expression) state)))
       ((atom? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
       ((list? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
