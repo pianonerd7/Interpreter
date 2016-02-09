@@ -76,8 +76,10 @@
       ((eq? 'return (condition expression)) (M_return (body expression) state))
       ((eq? 'if (condition expression))
        (if (M_boolean (body expression) state)
-       (M_state (ifTrueExec expression) state)
-       (M_state (elseExec expression) state)))
+           (M_state (ifTrueExec expression) state)
+           (if (null? (cdddr expression))
+               state
+               (M_state (elseExec expression) state))))
       (else (error 'unknown "unknown expression")))))
 
 (define variables car)
