@@ -34,15 +34,15 @@
 (define M_declare
   (lambda (expression state)
     (cond
-      ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) #f)) (addVariable (variable expression) #f state))
-      ((eq? (searchVariable (variable expression) state) #f) (addVariable (variable expression) (M_value (car (value expression)) state) state))
+      ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) 'empty)) (addVariable (variable expression) #f state))
+      ((eq? (searchVariable (variable expression) state) 'empty) (addVariable (variable expression) (M_value (car (value expression)) state) state))
       (else (error 'unknown "unknown expression")))))
 
 (define assign_value cadr)
 (define M_assignment
   (lambda (expression state)
     (cond
-      ((eq? (searchVariable (variable expression) state) #f) (error 'unknown "using before declaring"))
+      ((eq? (searchVariable (variable expression) state) 'empty) (error 'unknown "using before declaring"))
       ((number? (assign_value expression)) (addVariable (variable expression) (assign_value expression) (removeVariable (variable expression) state)))
       ((atom? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
       ((list? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
@@ -96,7 +96,7 @@
 (define searchVariable
   (lambda (var state)
     (cond
-      ((null? (car state)) #f)
+      ((null? (car state)) 'empty)
       ((eq? var (1stVariable state)) (1stValue state))
       (else (searchVariable var (removeFirstPair state))))))
 
