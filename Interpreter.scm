@@ -69,10 +69,11 @@
       ((eq? '&& (boolean_operator expression)) (and (eq? (M_boolean (leftCondition expression) state) true) (eq? (M_boolean (rightCondition expression) state) true)))
       ((eq? '|| (boolean_operator expression)) (or (eq? (M_boolean (leftCondition expression) state) true) (eq? (M_boolean (rightCondition expression) state) true)))
       ((eq? '! (boolean_operator expression)) (not (M_boolean (cdr expression) state)))
-      (else (error 'unknown "unknown expression")))))
+      (else (M_value expression state)))))
 
 (define condition car)
 (define body cdr)
+(define ifBody cadr)
 (define ifTrueExec caddr)
 (define elseExec cadddr)
 (define M_state
@@ -83,7 +84,7 @@
       ((eq? '= (condition expression)) (M_assignment (body expression) state))
       ((eq? 'return (condition expression)) (M_boolean (body expression) state))
       ((eq? 'if (condition expression))
-       (if (M_boolean (body expression) state)
+       (if (M_boolean (ifBody expression) state)
            (M_state (ifTrueExec expression) state)
            (if (null? (cdddr expression))
                state
@@ -134,7 +135,8 @@
     (cond
       ((null? expressions) state)
       ((eq? (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state)) #t) 'true)
-      (else ('false)))))
+      ((eq? (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state)) #f) 'false)
+      (else (evaluate(restOfExpression expressions) (M_state (1stExpression expressions) state))))))
 
 (define interpret
   (lambda (filename)
