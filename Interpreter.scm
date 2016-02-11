@@ -8,7 +8,7 @@
   (lambda (expression state)
     (cond
       ((number? expression) expression)
-      ((and (atom? expression)(eq? (searchVariable expression state) 'empty)) (error 'unknown "using before assigning"))
+      ((and (atom? expression)(eq? (searchVariable expression state) 'empty)) (error 'unknown "using before declaring"))
       ((and (atom? expression)(eq? (searchVariable expression state) #f)) (error 'unknown "using before assigning"))
       ((atom? expression) (searchVariable expression state))
       ((eq? '+ (operator expression)) (+ (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
