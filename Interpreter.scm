@@ -38,7 +38,7 @@
     (cond
       ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) 'empty)) (addVariable (variable expression) #f state))
       ((eq? (searchVariable (variable expression) state) 'empty) (addVariable (variable expression) (M_value (car (value expression)) state) state))
-            ((not (eq? (searchVariable (variable expression) state) #f)) (error 'unknown "redefining"))
+      ((not (eq? (searchVariable (variable expression) state) #f)) (error 'unknown "redefining"))
       (else (error 'unknown "unknown expression")))))
 
 (define assign_value cadr)
@@ -47,19 +47,19 @@
     (cond
       ((eq? (searchVariable (variable expression) state) 'empty) (error 'unknown "using before declaring"))
       ((not (eq? (searchVariable (variable expression) state) #f)) (error 'unknown "redefining"))
-      ;((number? (assign_value expression)) (addVariable (variable expression) (assign_value expression) (removeVariable (variable expression) state)))
-      ;((eq? (searchVariable (assign_value expression) state) #f) (error 'unknown "using before assigning"))
-      ;((or (atom? (assign_value expression))(list? (assign_value expression)))
       (else (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state))))))
 
-(define boolean_operator caar)
-(define leftCondition cadar)
-(define rightCondition caddar)
+(define boolean_operator car)
+(define leftCondition cadr)
+(define rightCondition caddr)
 (define M_boolean
   (lambda (expression state)
     (cond
       ((null? expression) state)
+      ((eq? 'true expression) true)
+      ((eq? 'false expression) false)
       ((atom? expression) (M_value expression state))
+      ((null? (cdr expression)) (M_boolean (car expression) state))
       ((eq? '== (boolean_operator expression)) (eq? (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
       ((eq? '!= (boolean_operator expression)) (not (eq? (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state))))
       ((eq? '< (boolean_operator expression)) (< (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
@@ -81,13 +81,16 @@
       ((null? expression) state)
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
       ((eq? '= (condition expression)) (M_assignment (body expression) state))
-      ((eq? 'return (condition expression)) (M_return (body expression) state))
+      ((eq? 'return (condition expression)) (M_boolean (body expression) state))
       ((eq? 'if (condition expression))
        (if (M_boolean (body expression) state)
            (M_state (ifTrueExec expression) state)
            (if (null? (cdddr expression))
                state
                (M_state (elseExec expression) state))))
+      ((eq? '&& (condition expression)) (M_boolean(expression) state))
+      ((eq? '|| (condition expression)) (M_boolean(expression) state))
+      ((eq? '! (condition expression)) (M_boolean(expression) state))
       (else (error 'unknown "unknown expression")))))
 
 (define variables car)
@@ -128,9 +131,10 @@
 (define restOfExpression cdr)
 (define evaluate
   (lambda (expressions state)
-    (if (null? expressions)
-        state
-        (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state)))))
+    (cond
+      ((null? expressions) state)
+      ((eq? (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state)) #t) 'true)
+      (else ('false)))))
 
 (define interpret
   (lambda (filename)
