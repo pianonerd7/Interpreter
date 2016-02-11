@@ -38,6 +38,7 @@
     (cond
       ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) 'empty)) (addVariable (variable expression) #f state))
       ((eq? (searchVariable (variable expression) state) 'empty) (addVariable (variable expression) (M_value (car (value expression)) state) state))
+            ((not (eq? (searchVariable (variable expression) state) #f)) (error 'unknown "redefining"))
       (else (error 'unknown "unknown expression")))))
 
 (define assign_value cadr)
@@ -45,12 +46,11 @@
   (lambda (expression state)
     (cond
       ((eq? (searchVariable (variable expression) state) 'empty) (error 'unknown "using before declaring"))
-      ((number? (assign_value expression)) (addVariable (variable expression) (assign_value expression) (removeVariable (variable expression) state)))
-      ;((eq? (searchVariable (assign_value expression) state) 'empty) (error 'unknown "using before declaring"))
+      ((not (eq? (searchVariable (variable expression) state) #f)) (error 'unknown "redefining"))
+      ;((number? (assign_value expression)) (addVariable (variable expression) (assign_value expression) (removeVariable (variable expression) state)))
       ;((eq? (searchVariable (assign_value expression) state) #f) (error 'unknown "using before assigning"))
-      ((atom? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
-      ((list? (assign_value expression)) (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state)))
-      (else (error 'unknown "unknown expression")))))
+      ;((or (atom? (assign_value expression))(list? (assign_value expression)))
+      (else (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state))))))
 
 (define boolean_operator caar)
 (define leftCondition cadar)
