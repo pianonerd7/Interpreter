@@ -9,7 +9,7 @@
     (cond
       ((number? expression) expression)
       ((and (atom? expression)(eq? (searchVariable expression state) 'empty)) (error 'unknown "using before declaring"))
-      ((and (atom? expression)(eq? (searchVariable expression state) #f)) (error 'unknown "using before assigning"))
+      ((and (atom? expression)(eq? (searchVariable expression state) 'null)) (error 'unknown "using before assigning"))
       ((atom? expression) (searchVariable expression state))
       ((eq? '+ (operator expression)) (+ (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
       ((eq? '- (operator expression))
@@ -23,7 +23,7 @@
 
 (define M_return
   (lambda (expression state)
-    (cond
+    (con
       ((number? (car expression)) (car expression))
       ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
       (else (searchVariable (car expression) state)))))
@@ -36,9 +36,9 @@
 (define M_declare
   (lambda (expression state)
     (cond
-      ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) 'empty)) (addVariable (variable expression) #f state))
-      ((eq? (searchVariable (variable expression) state) 'empty) (addVariable (variable expression) (M_value (car (value expression)) state) state))
-      ((not (eq? (searchVariable (variable expression) state) #f)) (error 'unknown "redefining"))
+      ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) 'empty)) (addVariable (variable expression) 'null state))
+      ((eq? (searchVariable (variable expression) state) 'empty) (addVariable (variable expression) (M_boolean (car (value expression)) state) state))
+      ((or (eq? (searchVariable (variable expression) state) 'empty) (not (eq? (searchVariable (variable expression) state) 'empty))) (error 'unknown "redefining"))
       (else (error 'unknown "unknown expression")))))
 
 (define assign_value cadr)
@@ -46,7 +46,6 @@
   (lambda (expression state)
     (cond
       ((eq? (searchVariable (variable expression) state) 'empty) (error 'unknown "using before declaring"))
-      ((not (eq? (searchVariable (variable expression) state) #f)) (error 'unknown "redefining"))
       (else (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state))))))
 
 (define boolean_operator car)
@@ -58,6 +57,8 @@
       ((null? expression) state)
       ((eq? 'true expression) true)
       ((eq? 'false expression) false)
+      ((eq? '#f expression) false)
+      ((eq? '#t expression) true)
       ((atom? expression) (M_value expression state))
       ((null? (cdr expression)) (M_boolean (car expression) state))
       ((eq? '== (boolean_operator expression)) (eq? (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
@@ -117,7 +118,7 @@
 (define removeVariable
   (lambda (var state)
     (cond
-      ((null? (variables state)) #f)
+      ((null? (variables state)) state)
       ((eq? var (1stVariable state)) (cons (restOfVariables state) (cons (cdadr state) '())))
       (else (cons (cons (1stVariable state) (variables (removeVariable var (removeFirstPair state)))) (cons (cons (1stValue state) (vals (removeVariable var (removeFirstPair state)))) '()))))))
 
