@@ -28,7 +28,6 @@
      ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
      (else (searchVariable (car expression) state)))))
 
-
 (define variable car)
 (define value cdr)
 ;(M_declare '(x) '(()())) --> ((x) (#f))
@@ -146,5 +145,3 @@
   (define interpret
     (lambda (filename)
       (evaluate (parser filename) '(()()))))
-  
-  
