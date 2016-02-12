@@ -89,14 +89,11 @@
            (if (null? (cdddr expression))
                state
                (M_state (elseExec expression) state))))
-      ((eq? '&& (condition expression)) (M_boolean(expression) state))
-      ((eq? '|| (condition expression)) (M_boolean(expression) state))
-      ((eq? '! (condition expression)) (M_boolean(expression) state))
       ((eq? 'while (condition expression))
        (if (M_boolean(ifBody expression) state)
            (M_state expression (M_state (ifTrueExec expression) state))
            state))
-       (else (error 'unknown "unknown expression")))))
+       (else (M_boolean(expression) state)))))
   
   (define variables car)
   (define vals cadr)
