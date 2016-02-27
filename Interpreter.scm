@@ -73,6 +73,33 @@
       ((eq? '! (boolean_operator expression)) (not (M_boolean (cdr expression) state)))
       (else (M_value expression state)))))
 
+(define M_state_If
+  (lambda (expression state)
+    (if (M_boolean (ifBody expression) state)
+        (M_state (ifTrueExec expression) state)
+        (if (null? (cdddr expression))
+            state
+            (M_state (elseExec expression) state)))))
+
+(define M_state_While
+  (lambda (expression state)
+    (if (M_boolean(ifBody expression) state)
+        (M_state expression (M_state (ifTrueExec expression) state))
+        state)))
+
+(define M_state_Begin
+  (lambda (expression state)
+    (if (null? expression)
+        (removeTopLayer state)
+        (M_state_Begin (restExpression expression) (M_state (firstExpression expression) (addLayer initialState state))))))
+
+(define firstExpression car)
+(define restExpression cdr)
+;helper function to remove the top most layer of state
+(define removedTopLayer cdr)
+;helper function to add another layer to the state
+(define addLayer cons)
+
 (define condition car)
 (define body cdr)
 (define ifBody cadr)
@@ -85,23 +112,10 @@
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
       ((eq? '= (condition expression)) (M_assignment (body expression) state))
       ((eq? 'return (condition expression)) (M_boolean (body expression) state))
-      ((eq? 'if (condition expression)) (M_stateIf expression state))
-      ((eq? 'while (condition expression)) (M_stateWhile expression state))
+      ((eq? 'if (condition expression)) (M_state_If expression state))
+      ((eq? 'while (condition expression)) (M_state_While expression state))
+      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state))
       (else (M_boolean(expression) state)))))
-
-(define M_stateIf
-  (lambda (expression state)
-    (if (M_boolean (ifBody expression) state)
-        (M_state (ifTrueExec expression) state)
-        (if (null? (cdddr expression))
-            state
-            (M_state (elseExec expression) state)))))
-
-(define M_stateWhile
-  (lambda (expression state)
-    (if (M_boolean(ifBody expression) state)
-        (M_state expression (M_state (ifTrueExec expression) state))
-        state)))
 
 (define variables car)
 (define vals cadr)
