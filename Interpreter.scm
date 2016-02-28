@@ -91,7 +91,13 @@
   (lambda (expression state)
     (if (null? expression)
         (removeTopLayer state)
-        (M_state_Begin (restExpression expression) (M_state (firstExpression expression) (addLayer initialState state))))))
+        (M_state_Begin '() (executeBegin expression (addLayer initialState state))))))
+
+(define executeBegin
+  (lambda (expression state)
+    (if (null? expression)
+        state
+        (executeBegin (restExpression expression) (M_state (firstExpression expression) state)))))
 
 (define firstExpression car)
 (define restExpression cdr)
@@ -117,6 +123,15 @@
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state))
       (else (M_boolean(expression) state)))))
 
+(define topLayer car)
+(define restLayer cdr)
+(define searchVariable
+  (lambda (var state)
+    (cond
+      ((null? (car state)) 'empty)
+      ((eq? (searchVariableScope var (topLayer state)) 'empty) (searchVariable var (restLayer state)))
+      (else (searchVariableScope var (topLayer state))))))
+                                      
 (define variables car)
 (define vals cadr)
 (define restOfVariables cdar)
@@ -124,7 +139,7 @@
 (define 1stVariable caar)
 (define 1stValue caadr)
 ;(searchVariable 'y '((x y z) (1 2 3))) --> 2
-(define searchVariable
+(define searchVariableScope
   (lambda (var state)
     (cond
       ((null? (car state)) 'empty)
