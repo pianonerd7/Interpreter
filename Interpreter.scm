@@ -91,7 +91,7 @@
   (lambda (expression state)
     (if (null? expression)
         (removeTopLayer state)
-        (M_state_Begin '() (executeBegin expression (addLayer initialState state))))))
+        (M_state_Begin '() (executeBegin expression (addLayer initialState (cons state '())))))))
 
 (define executeBegin
   (lambda (expression state)
@@ -144,7 +144,7 @@
     (cond
       ((null? (car state)) 'empty)
       ((eq? var (1stVariable state)) (1stValue state))
-      (else (searchVariable var (removeFirstPair state))))))
+      (else (searchVariableScope var (removeFirstPair state))))))
 
 ;(addVariable 'x 4 '((z)(1))) --> ((z x) (1 4))
 (define addVariable
