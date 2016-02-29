@@ -30,11 +30,21 @@
      ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
      (else (searchVariable (car expression) state)))))
 
-(define variable car)
-(define value cdr)
+(define topLayer car)
+(define restOfStates cadr)
+
+(define addToRestOfState cons)
 ;(M_declare '(x) '(()())) --> ((x) (#f))
 ;(M_declare '(x 12) '(()())) --> ((x) (12))
 (define M_declare
+  (lambda (expression state)
+    (cond  
+    ((eq? state initialState)(declareVarToTopLayer expression state)) 
+    (else (addToRestOfState (declareVarToTopLayer expression (topLayer state)) (restOfStates state))))))
+
+(define variable car)
+(define value cdr)
+(define declareVarToTopLayer
   (lambda (expression state)
     (cond
       ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) 'empty)) (addVariable (variable expression) 'null state))
@@ -125,13 +135,15 @@
 
 (define topLayer car)
 (define restLayer cdr)
+(define isAlreadyOneLayer cdadr)
 (define searchVariable
   (lambda (var state)
     (cond
-      ((null? (car state)) 'empty)
+      ((or (null? state) (null? (car state))) 'empty)
+      ((null? (isAlreadyOneLayer state)) (searchVariableScope var state))
       ((eq? (searchVariableScope var (topLayer state)) 'empty) (searchVariable var (restLayer state)))
       (else (searchVariableScope var (topLayer state))))))
-                                      
+
 (define variables car)
 (define vals cadr)
 (define restOfVariables cdar)
