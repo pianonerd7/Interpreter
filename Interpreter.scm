@@ -173,14 +173,6 @@
   (lambda (var value state)
     (cons (append (variables state) (cons var '()))(cons (append (vals state) (cons value '())) '()))))
 
-;(removeVariable 'y '((x y z) (1 2 3))) --> ((x z) (1 3))
-(define removeVariable
-  (lambda (var state)
-    (cond
-      ((null? (variables state)) state)
-      ((eq? var (1stVariable state)) (cons (restOfVariables state) (cons (cdadr state) '())))
-      (else (cons (cons (1stVariable state) (variables (removeVariable var (removeFirstPair state)))) (cons (cons (1stValue state) (vals (removeVariable var (removeFirstPair state)))) '()))))))
-
 ;(removeFirstPair '((x y z)(4 5 6))) --> ((y z) (5 6))
 (define removeFirstPair
   (lambda (state)
