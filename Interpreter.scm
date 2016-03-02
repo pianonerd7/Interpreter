@@ -33,14 +33,14 @@
 (define topLayer car)
 (define restOfStates cadr)
 
-(define addToRestOfState cons)
+(define addLayer cons)
 ;(M_declare '(x) '(()())) --> ((x) (#f))
 ;(M_declare '(x 12) '(()())) --> ((x) (12))
 (define M_declare
   (lambda (expression state)
     (cond  
     ((eq? state initialState)(declareVarToTopLayer expression state)) 
-    (else (addToRestOfState (declareVarToTopLayer expression (topLayer state)) (restOfStates state))))))
+    (else (addLayer (declareVarToTopLayer expression state) (cons (restOfStates state) '()))))))
 
 (define variable car)
 (define value cdr)
@@ -97,11 +97,15 @@
         (M_state expression (M_state (ifTrueExec expression) state))
         state)))
 
+(define consEmptyListToState
+  (lambda (state)
+    (cons state '())))
+
 (define M_state_Begin
   (lambda (expression state)
     (if (null? expression)
         (removeTopLayer state)
-        (M_state_Begin '() (executeBegin expression (addLayer initialState (cons state '())))))))
+        (M_state_Begin '() (executeBegin expression (addLayer initialState (consEmptyListToState state)))))))
 
 (define executeBegin
   (lambda (expression state)
@@ -134,7 +138,7 @@
       (else (M_boolean(expression) state)))))
 
 (define topLayer car)
-(define restLayer cdr)
+(define restLayer cadr)
 (define isAlreadyOneLayer cdadr)
 (define searchVariable
   (lambda (var state)
@@ -160,6 +164,12 @@
 
 ;(addVariable 'x 4 '((z)(1))) --> ((z x) (1 4))
 (define addVariable
+  (lambda (var value state)
+    (cond
+      ((or (eq? initialState state)(null? (isAlreadyOneLayer state))) (addVariableScope var value state))
+      (else (addVariableScope var value (topLayer state))))))
+
+(define addVariableScope
   (lambda (var value state)
     (cons (append (variables state) (cons var '()))(cons (append (vals state) (cons value '())) '()))))
 
