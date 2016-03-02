@@ -57,7 +57,7 @@
   (lambda (expression state)
     (cond
       ((eq? (searchVariable (variable expression) state) 'empty) (error 'unknown "using before declaring"))
-      (else (addVariable (variable expression) (M_value (assign_value expression) state) (removeVariable (variable expression) state))))))
+      (else (assignValue (variable expression) (M_value (assign_value expression) state) state)))))
 
 (define boolean_operator car)
 (define leftCondition cadr)
@@ -173,6 +173,21 @@
   (lambda (var value state)
     (cons (append (variables state) (cons var '()))(cons (append (vals state) (cons value '())) '()))))
 
+(define assignValue
+  (lambda (var value state)
+    (cond
+      ((or (null? state)(null? (car state))) state)
+      ((null? (isAlreadyOneLayer state)) (assignValueScope var value state))
+      ((eq? (assignValueScope var value (topLayer state)) 'empty) (cons (topLayer state)(assignValue var value (restLayer state))))
+      (else (cons (topLayer state)(assignValueScope var value (topLayer state)))))))
+
+(define assignValueScope
+  (lambda (var value state)
+    (cond
+      ((null? (car state)) 'empty)
+      ((eq? var (1stVariable state)) (cons (variables state) (cons (cons value (cdr (vals state))) '())))
+      (else (assignValueScope var value (removeFirstPair state))))))
+      
 ;(removeFirstPair '((x y z)(4 5 6))) --> ((y z) (5 6))
 (define removeFirstPair
   (lambda (state)
