@@ -64,6 +64,7 @@
       ((eq? '% (operator expression)) (remainder (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
       (else (error 'unknown "unknown expression")))))
 
+;helper function to add another layer to the state
 (define addLayer cons)
 (define restOfStates cadr)
 (define value cadr)
@@ -100,7 +101,6 @@
         state
         (cons (cons (cdr (variables (topLayerState state))) (cons (cdr (vals (topLayerState state))) '())) (restLayerState state)))))
 
-;((a) (31160))
 (define addToFrontOfState
   (lambda (var value state)
     (cond 
@@ -138,18 +138,13 @@
   (lambda (expression state continue break)
     (removeTopLayer (executeBegin expression (addLayer initialState (consEmptyListToState state)) continue break))))
 
+(define firstExpression car)
+(define restExpression cdr)
 (define executeBegin
   (lambda (expression state continue break)
     (if (null? expression)
         state
         (executeBegin (restExpression expression) (M_state (firstExpression expression) state continue break) continue break))))
-
-(define firstExpression car)
-(define restExpression cdr)
-;helper function to remove the top most layer of state
-(define removedTopLayer cdr)
-;helper function to add another layer to the state
-(define addLayer cons)
 
 (define searchVariable
   (lambda (var state return)
@@ -159,17 +154,6 @@
       ((eq? (firstVar (variables (topLayerState state))) var) (return (firstVal (vals (topLayerState state)))))
       (else (searchVariable var (removeFirstPairFromState state) (lambda (v) (return v)))))))
       
-
-
-(define isAlreadyOneLayer cdadr)
-
-;(removeFirstPair '((x y z)(4 5 6))) --> ((y z) (5 6))
-(define removeFirstPair
-  (lambda (state)
-    (if (null? (car state))
-        state
-        (cons (restOfVariables state)(cons (restOfValues state) '())))))
-
 (define 1stExpression car)
 (define restOfExpression cdr)
 (define evaluate
