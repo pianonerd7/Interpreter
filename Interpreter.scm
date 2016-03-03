@@ -81,6 +81,7 @@
     (assignValue-cps (variable expression) (M_value (value expression) state) state (lambda (v) v))))
 
 (define firstVar car)
+(define firstVal car)
 (define variables car)
 (define vals cadr)
 (define topLayerState car)
@@ -150,11 +151,19 @@
 ;helper function to add another layer to the state
 (define addLayer cons)
 
+(define searchVariable
+  (lambda (var state return)
+    (cond
+      ((null? state) (return 'empty))
+      ((null? (vals (topLayerState state))) (return (searchVariable var (restLayerState state) (lambda (v) (return v)))))
+      ((eq? (firstVar (variables (topLayerState state))) var) (return (firstVal (vals (topLayerState state)))))
+      (else (searchVariable var (removeFirstPairFromState state) (lambda (v) (return v)))))))
+      
 
 (define topLayer car)
 (define restLayer cadr)
 (define isAlreadyOneLayer cdadr)
-(define searchVariable
+(define searchVariables
   (lambda (var state)
     (cond
       ((or (null? state) (null? (car state))) 'empty)
