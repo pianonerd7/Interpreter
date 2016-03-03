@@ -99,11 +99,13 @@
         state
         (cons (cons (cdr (variables (topLayerState state))) (cons (cdr (vals (topLayerState state))) '())) (restLayerState state)))))
 
+;((a) (31160))
 (define addToFrontOfState
   (lambda (var value state)
-    (if (eq? state initialState)
-        (cons (cons var (variables state)) (cons (cons value (vals state)) '()))
-        (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (restLayerState state)))))
+    (cond 
+    ((eq? state initialState) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
+    ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
+    (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (restLayerState state))))))
 
 (define M_return
   (lambda (expression state)
