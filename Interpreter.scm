@@ -160,41 +160,8 @@
       (else (searchVariable var (removeFirstPairFromState state) (lambda (v) (return v)))))))
       
 
-(define topLayer car)
-(define restLayer cadr)
+
 (define isAlreadyOneLayer cdadr)
-(define searchVariables
-  (lambda (var state)
-    (cond
-      ((or (null? state) (null? (car state))) 'empty)
-      ((null? (isAlreadyOneLayer state)) (searchVariableScope var state))
-      ((eq? (searchVariableScope var (topLayer state)) 'empty) (searchVariable var (restLayer state)))
-      (else (searchVariableScope var (topLayer state))))))
-
-(define variables car)
-(define vals cadr)
-(define restOfVariables cdar)
-(define restOfValues cdadr)
-(define 1stVariable caar)
-(define 1stValue caadr)
-;(searchVariable 'y '((x y z) (1 2 3))) --> 2
-(define searchVariableScope
-  (lambda (var state)
-    (cond
-      ((null? (car state)) 'empty)
-      ((eq? var (1stVariable state)) (1stValue state))
-      (else (searchVariableScope var (removeFirstPair state))))))
-
-;(addVariable 'x 4 '((z)(1))) --> ((z x) (1 4))
-(define addVariable
-  (lambda (var value state)
-    (cond
-      ((or (eq? initialState state)(null? (isAlreadyOneLayer state))) (addVariableScope var value state))
-      (else (addVariableScope var value (topLayer state))))))
-
-(define addVariableScope
-  (lambda (var value state)
-    (cons (append (variables state) (cons var '()))(cons (append (vals state) (cons value '())) '()))))
 
 ;(removeFirstPair '((x y z)(4 5 6))) --> ((y z) (5 6))
 (define removeFirstPair
