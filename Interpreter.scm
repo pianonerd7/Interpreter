@@ -51,9 +51,9 @@
   (lambda (expression state)
     (cond
       ((number? expression) expression)
-      ((and (atom? expression)(eq? (searchVariable expression state) 'empty)) (error 'unknown "using before declaring"))
-      ((and (atom? expression)(eq? (searchVariable expression state) 'null)) (error 'unknown "using before assigning"))
-      ((atom? expression) (searchVariable expression state))
+      ((and (atom? expression)(eq? (searchVariable expression state (lambda (v) v)) 'empty)) (error 'unknown "using before declaring"))
+      ((and (atom? expression)(eq? (searchVariable expression state (lambda (v) v)) 'null)) (error 'unknown "using before assigning"))
+      ((atom? expression) (searchVariable expression state (lambda (v) v)))
       ((eq? '+ (operator expression)) (+ (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
       ((eq? '- (operator expression))
        (if (null? (cddr expression))
@@ -97,9 +97,10 @@
 
 (define removeFirstPairFromState
   (lambda (state)
-    (if (eq? state initialState)
-        state
-        (cons (cons (cdr (variables (topLayerState state))) (cons (cdr (vals (topLayerState state))) '())) (restLayerState state)))))
+    (cond
+      ((eq? state initialState) state)
+      ((not (list? (variables (topLayerState state)))) (cons (cdr (variables state)) (cons (cdr (vals state)) '())))
+      (else (cons (cons (cdr (variables (topLayerState state))) (cons (cdr (vals (topLayerState state))) '())) (restLayerState state))))))
 
 (define addToFrontOfState
   (lambda (var value state)
@@ -110,10 +111,16 @@
 
 (define M_return
   (lambda (expression state)
-    (con
+    (cond
      ((number? (car expression)) (car expression))
      ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
      (else (searchVariable (car expression) state)))))
+
+(define M_state_While
+  (lambda (expression state)
+    (if (M_boolean(ifBody expression) state)
+        (M_state expression (M_state (ifTrueExec expression) state))
+        state)))
 
 (define M_state_If
   (lambda (expression state)
@@ -122,12 +129,6 @@
         (if (null? (cdddr expression))
             state
             (M_state (elseExec expression) state)))))
-
-(define M_state_While
-  (lambda (expression state)
-    (if (M_boolean(ifBody expression) state)
-        (M_state expression (M_state (ifTrueExec expression) state))
-        state)))
 
 (define consEmptyListToState
   (lambda (state)
@@ -150,6 +151,8 @@
   (lambda (var state return)
     (cond
       ((null? state) (return 'empty))
+      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (firstVal (vals state))))
+      ((not (list? (variables (topLayerState state)))) (return (searchVariable var (removeFirstPairFromState state) (lambda (v)(return v)))))
       ((null? (vals (topLayerState state))) (return (searchVariable var (restLayerState state) (lambda (v) (return v)))))
       ((eq? (firstVar (variables (topLayerState state))) var) (return (firstVal (vals (topLayerState state)))))
       (else (searchVariable var (removeFirstPairFromState state) (lambda (v) (return v)))))))
