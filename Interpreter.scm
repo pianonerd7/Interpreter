@@ -73,30 +73,9 @@
 (define M_declare
   (lambda (expression state continue break)
     if (null? (value expression)
-              (M_declare-cps (variable expression) 'null state (lambda (v) v))
-              (M_declare-cps (variable expression) (value expression) state (lambda (v) v)))))
-
-(define M_declare-cps
-  (lambda (var value state return)
-    (cond
-      (
-
+              (addToFrontOfState (variable expression) 'null state)
+              (addToFrontOfState (variable expression) (value expression) state))))
      
-(define M_declares
-  (lambda (expression state)
-    (cond  
-    ((or (eq? state initialState) (null? (isAlreadyOneLayer state))) (declareVarToTopLayer expression state)) 
-    (else (addLayer (declareVarToTopLayer expression state) (cons (restOfStates state) '()))))))
-
-(define declareVarToTopLayer
-  (lambda (expression state)
-    (cond
-      ((and (null? (value expression)) (eq? (searchVariable (variable expression) state) 'empty)) (addVariable (variable expression) 'null state))
-      ((eq? (searchVariable (variable expression) state) 'empty) (addVariable (variable expression) (M_boolean (car (value expression)) state) state))
-      ((or (eq? (searchVariable (variable expression) state) 'empty) (not (eq? (searchVariable (variable expression) state) 'empty))) (error 'unknown "redefining"))
-      (else (error 'unknown "unknown expression")))))
-
-
 (define assign_value cadr)
 (define M_assignment
   (lambda (expression state)
@@ -115,13 +94,6 @@
       ((eq? (firstVar (vals (topLayerState state))) var) (return (addToFrontOfState var value (removeFirstPairFromState))))
       (else (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (addToFrontOfstate (car (variables (topLayerState state))) (car (vals (topLayerState state))) v)))))))
 
-(define M_return
-  (lambda (expression state)
-    (con
-     ((number? (car expression)) (car expression))
-     ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
-     (else (searchVariable (car expression) state)))))
-
 (define removeFistPairFromState
   (lambda (state)
     (cons (cons (cdr (variables (topLayerState state))) (cdr (vals (topLayerState state)))) (restLayerState state))))
@@ -129,6 +101,13 @@
 (define addToFrontOfState
   (lambda (var value state)
     (cons (cons (cons var (variables (topLayerState state))) (cons value (vals (topLayerState state)))) (restLayerState state))))
+
+(define M_return
+  (lambda (expression state)
+    (con
+     ((number? (car expression)) (car expression))
+     ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
+     (else (searchVariable (car expression) state)))))
 
 (define M_state_If
   (lambda (expression state)
