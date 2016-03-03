@@ -74,7 +74,7 @@
   (lambda (expression state)
     (if (null? (value expression))
         (addToFrontOfState (variable expression) 'null state)
-        (addToFrontOfState (variable expression) (M_value (value expression) state) state))))
+        (assignValue-cps (variable expression) (M_value (value expression) state) (addToFrontOfState(variable expression) 'null state) (lambda (v) v)))))
 
 ;assignValue uses cps
 (define M_assignment
@@ -91,6 +91,8 @@
   (lambda (var value state return)
     (cond
       ((null? state)(error 'unknown "using before declaring"))
+      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (addToFrontOfState var value (removeFirstPairFromState state))))
+      ((not (list? (variables (topLayerState state)))) (return (assignValue-cps var value (removeFirstPairFromState state) (lambda (v)(return v)))))
       ((null? (vals (topLayerState state))) (return (assignValue-cps var value (restLayerState state) (lambda (v) (cons (topLayerState state) v)))))
       ((eq? (firstVar (variables (topLayerState state))) var) (return (addToFrontOfState var value (removeFirstPairFromState state))))
       (else (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (return (addToFrontOfState (car (variables (topLayerState state))) (car (vals (topLayerState state))) v))))))))
@@ -120,7 +122,7 @@
 (define M_state_If
   (lambda (expression state)
     (if (M_boolean (ifBody expression) state)
-        (M_state (ifTrueExec expression) state)
+        (M_state (ifTrueExec expression) state (lambda (v) v) (lambda (v) v))
         (if (null? (cdddr expression))
             state
             (M_state (elseExec expression) state)))))
@@ -135,7 +137,7 @@
 (define addToFrontOfState
   (lambda (var value state)
     (cond 
-    ((eq? state initialState) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
+    ((equal? state initialState) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
     ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
     (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (restLayerState state))))))
 
