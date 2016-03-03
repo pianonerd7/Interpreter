@@ -92,7 +92,7 @@
     (cond
       ((null? state)(error 'unknown "using before declaring"))
       ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (addToFrontOfState var value (removeFirstPairFromState state))))
-      ((not (list? (variables (topLayerState state)))) (return (assignValue-cps var value (removeFirstPairFromState state) (lambda (v)(return v)))))
+      ((not (list? (variables (topLayerState state)))) (return (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (return (addToFrontOfState (car (variables state)) (car (vals state)) v))))))
       ((null? (vals (topLayerState state))) (return (assignValue-cps var value (restLayerState state) (lambda (v) (cons (topLayerState state) (cons v '()))))))
       ((eq? (firstVar (variables (topLayerState state))) var) (return (addToFrontOfState var value (removeFirstPairFromState state))))
       (else (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (return (addToFrontOfState (car (variables (topLayerState state))) (car (vals (topLayerState state))) v))))))))
@@ -125,7 +125,7 @@
         (M_state (ifTrueExec expression) state (lambda (v) v) (lambda (v) v))
         (if (null? (cdddr expression))
             state
-            (M_state (elseExec expression) state)))))
+            (M_state (elseExec expression) state (lambda (v) v) (lambda (v) v))))))
 
 (define removeFirstPairFromState
   (lambda (state)
