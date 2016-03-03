@@ -95,6 +95,36 @@
       ((eq? (firstVar (variables (topLayerState state))) var) (return (addToFrontOfState var value (removeFirstPairFromState state))))
       (else (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (return (addToFrontOfState (car (variables (topLayerState state))) (car (vals (topLayerState state))) v))))))))
 
+(define M_return
+  (lambda (expression state)
+    (cond
+     ((number? (car expression)) (car expression))
+     ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
+     (else (searchVariable (car expression) state)))))
+
+(define M_state_While
+  (lambda (expression state)
+    (whileLoop (ifBody expression) (ifTrueExec expression) state)))
+
+(define whileLoop
+  (lambda (condition body state)
+    (call/cc
+     (lambda (break)
+       (letrec ((loop (lambda (condition body state)
+                        (if (M_boolean condition state)
+                            (loop condition body (M_state body state (lambda (v) v) break))
+                            state))))
+         (loop condition body state))))))
+           
+
+(define M_state_If
+  (lambda (expression state)
+    (if (M_boolean (ifBody expression) state)
+        (M_state (ifTrueExec expression) state)
+        (if (null? (cdddr expression))
+            state
+            (M_state (elseExec expression) state)))))
+
 (define removeFirstPairFromState
   (lambda (state)
     (cond
@@ -108,27 +138,6 @@
     ((eq? state initialState) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
     ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
     (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (restLayerState state))))))
-
-(define M_return
-  (lambda (expression state)
-    (cond
-     ((number? (car expression)) (car expression))
-     ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
-     (else (searchVariable (car expression) state)))))
-
-(define M_state_While
-  (lambda (expression state)
-    (if (M_boolean(ifBody expression) state)
-        (M_state expression (M_state (ifTrueExec expression) state))
-        state)))
-
-(define M_state_If
-  (lambda (expression state)
-    (if (M_boolean (ifBody expression) state)
-        (M_state (ifTrueExec expression) state)
-        (if (null? (cdddr expression))
-            state
-            (M_state (elseExec expression) state)))))
 
 (define consEmptyListToState
   (lambda (state)
