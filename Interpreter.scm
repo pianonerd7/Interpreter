@@ -66,17 +66,17 @@
 
 (define addLayer cons)
 (define restOfStates cadr)
-(define value cdr)
+(define value cadr)
 (define variable car)
-;(M_declare '(x) '(()())) --> ((x) (null))
-;(M_declare '(x 12) '(()())) --> ((x) (12))
+; don't need cps
 (define M_declare
-  (lambda (expression state continue break)
-    if (null? (value expression)
+  (lambda (expression state)
+    (if (null? (value expression))
               (addToFrontOfState (variable expression) 'null state)
               (addToFrontOfState (variable expression) (value expression) state))))
      
 (define assign_value cadr)
+;assignValue uses cps
 (define M_assignment
   (lambda (expression state)
       (assignValue (variable expression) (M_value (assign_value expression) state) state)))
@@ -100,7 +100,9 @@
 
 (define addToFrontOfState
   (lambda (var value state)
-    (cons (cons (cons var (variables (topLayerState state))) (cons value (vals (topLayerState state)))) (restLayerState state))))
+    (if (eq? state initialState)
+        (cons (cons var (variables state)) (cons value (vals state)))
+        (cons (cons (cons var (variables (topLayerState state))) (cons value (vals (topLayerState state)))) (restLayerState state)))))
 
 (define M_return
   (lambda (expression state)
@@ -195,9 +197,9 @@
   (lambda (expressions state)
     (cond
       ((null? expressions) state)
-      ((eq? (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) (lambda (v) v) (lambda (v) v) state)) #t) 'true)
-      ((eq? (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) (lambda (v) v) (lambda (v) v) state)) #f) 'false)
-      (else (evaluate(restOfExpression expressions) (M_state (1stExpression expressions) (lambda (v) v) (lambda (v) v) state))))))
+      ((eq? (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state (lambda (v) v) (lambda (v) v))) #t) 'true)
+      ((eq? (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state (lambda (v) v) (lambda (v) v))) #f) 'false)
+      (else (evaluate(restOfExpression expressions) (M_state (1stExpression expressions) state (lambda (v) v) (lambda (v) v)))))))
 
 (define initialState '(()()))
 
