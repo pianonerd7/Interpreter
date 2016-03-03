@@ -16,7 +16,7 @@
       ((eq? 'return (condition expression)) (M_boolean (body expression) state))
       ((eq? 'if (condition expression)) (M_state_If expression state))
       ((eq? 'while (condition expression)) (M_state_While expression state))
-      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state))
+      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state continue break))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -72,14 +72,13 @@
 (define M_declare
   (lambda (expression state)
     (if (null? (value expression))
-              (addToFrontOfState (variable expression) 'null state)
-              (addToFrontOfState (variable expression) (value expression) state))))
-     
-(define assign_value cadr)
+        (addToFrontOfState (variable expression) 'null state)
+        (addToFrontOfState (variable expression) (M_value (value expression) state) state))))
+
 ;assignValue uses cps
 (define M_assignment
   (lambda (expression state)
-      (assignValue (variable expression) (M_value (assign_value expression) state) state)))
+    (assignValue-cps (variable expression) (M_value (value expression) state) state (lambda (v) v))))
 
 (define firstVar car)
 (define variables car)
@@ -90,19 +89,21 @@
   (lambda (var value state return)
     (cond
       ((null? state)(error 'unknown "using before declaring"))
-      ((not (null? (vals (topLayerState state)))) (return (assignValue-cps var value (restLayerState) (lambda (v) (cons (topLayerState state) v)))))
-      ((eq? (firstVar (vals (topLayerState state))) var) (return (addToFrontOfState var value (removeFirstPairFromState))))
-      (else (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (addToFrontOfstate (car (variables (topLayerState state))) (car (vals (topLayerState state))) v)))))))
+      ((null? (vals (topLayerState state))) (return (assignValue-cps var value (restLayerState state) (lambda (v) (cons (topLayerState state) v)))))
+      ((eq? (firstVar (variables (topLayerState state))) var) (return (addToFrontOfState var value (removeFirstPairFromState state))))
+      (else (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (return (addToFrontOfState (car (variables (topLayerState state))) (car (vals (topLayerState state))) v))))))))
 
-(define removeFistPairFromState
+(define removeFirstPairFromState
   (lambda (state)
-    (cons (cons (cdr (variables (topLayerState state))) (cdr (vals (topLayerState state)))) (restLayerState state))))
+    (if (eq? state initialState)
+        state
+        (cons (cons (cdr (variables (topLayerState state))) (cons (cdr (vals (topLayerState state))) '())) (restLayerState state)))))
 
 (define addToFrontOfState
   (lambda (var value state)
     (if (eq? state initialState)
-        (cons (cons var (variables state)) (cons value (vals state)))
-        (cons (cons (cons var (variables (topLayerState state))) (cons value (vals (topLayerState state)))) (restLayerState state)))))
+        (cons (cons var (variables state)) (cons (cons value (vals state)) '()))
+        (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (restLayerState state)))))
 
 (define M_return
   (lambda (expression state)
@@ -129,16 +130,16 @@
   (lambda (state)
     (cons state '())))
 
-(define removeTopLayer cdr)
+(define removeTopLayer cadr)
 (define M_state_Begin
-  (lambda (expression state)
-    (removeTopLayer (executeBegin expression (addLayer initialState (consEmptyListToState state))))))
+  (lambda (expression state continue break)
+    (removeTopLayer (executeBegin expression (addLayer initialState (consEmptyListToState state)) continue break))))
 
 (define executeBegin
-  (lambda (expression state)
+  (lambda (expression state continue break)
     (if (null? expression)
         state
-        (executeBegin (restExpression expression) (M_state (firstExpression expression) state)))))
+        (executeBegin (restExpression expression) (M_state (firstExpression expression) state continue break) continue break))))
 
 (define firstExpression car)
 (define restExpression cdr)
@@ -183,7 +184,7 @@
 (define addVariableScope
   (lambda (var value state)
     (cons (append (variables state) (cons var '()))(cons (append (vals state) (cons value '())) '()))))
-      
+
 ;(removeFirstPair '((x y z)(4 5 6))) --> ((y z) (5 6))
 (define removeFirstPair
   (lambda (state)
