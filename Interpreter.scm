@@ -86,14 +86,14 @@
 (define variables car)
 (define vals cadr)
 (define topLayerState car)
-(define restLayerState cdr)
+(define restLayerState cadr)
 (define assignValue-cps
   (lambda (var value state return)
     (cond
       ((null? state)(error 'unknown "using before declaring"))
       ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (addToFrontOfState var value (removeFirstPairFromState state))))
       ((not (list? (variables (topLayerState state)))) (return (assignValue-cps var value (removeFirstPairFromState state) (lambda (v)(return v)))))
-      ((null? (vals (topLayerState state))) (return (assignValue-cps var value (restLayerState state) (lambda (v) (cons (topLayerState state) v)))))
+      ((null? (vals (topLayerState state))) (return (assignValue-cps var value (restLayerState state) (lambda (v) (cons (topLayerState state) (cons v '()))))))
       ((eq? (firstVar (variables (topLayerState state))) var) (return (addToFrontOfState var value (removeFirstPairFromState state))))
       (else (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (return (addToFrontOfState (car (variables (topLayerState state))) (car (vals (topLayerState state))) v))))))))
 
@@ -132,14 +132,14 @@
     (cond
       ((eq? state initialState) state)
       ((not (list? (variables (topLayerState state)))) (cons (cdr (variables state)) (cons (cdr (vals state)) '())))
-      (else (cons (cons (cdr (variables (topLayerState state))) (cons (cdr (vals (topLayerState state))) '())) (restLayerState state))))))
+      (else (cons (cons (cdr (variables (topLayerState state))) (cons (cdr (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
 
 (define addToFrontOfState
   (lambda (var value state)
     (cond 
     ((equal? state initialState) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
     ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
-    (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (restLayerState state))))))
+    (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
 
 (define consEmptyListToState
   (lambda (state)
