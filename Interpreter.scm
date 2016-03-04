@@ -20,7 +20,7 @@
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
       ((eq? 'try (condition expression)) (M_state_Try (body expression) state))
-      ((eq? 'throw (condition expression)) (break state))
+      ((eq? 'throw (condition expression)) (M_state(break state))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -155,6 +155,9 @@
 (define tryBlock car)
 (define 2ndExpression cadr)
 (define 3rdExpression cddr)
+(define catchBody
+  (lambda (expression)
+    (caddr (2ndExpression expression))))
 (define M_state_Try
   (lambda (expression state)
     (cond
@@ -178,12 +181,16 @@
 
 (define M_state_TryFinally
   (lambda (expression state)
-    (
-      ())))
+    (TryEvaluate (2ndExpression expression)
+                 (letrec ((loop (lambda (expression state)
+                                  (if (null? expression)
+                                      state
+                                      (loop (restExpression expression) (M_state (1stExpression expression) state (lamda (v) v) (lambda (v) v) (lambda (v) (error "not in loop"))))))))
+                   (loop (tryBlock expression) state)))))
 
 (define M_state_TryCatchFinally
   (lambda (expression state)
-    (TryEvaluate (3rdExpression expression) (TryEvaluate (car (restExpression (2ndExpression expression))) (call/cc
+    (TryEvaluate (3rdExpression expression) (TryEvaluate (catchBody expression) (call/cc
      (lambda (throw)
        (letrec ((loop (lambda (expression state)
                         (if (null? expression)
@@ -197,7 +204,7 @@
                      (if (null? expression)
                          state
                          (loop (restExpression expression) (M_state (1stExpression expression) state (lambda (v) v) (lambda (v) (error "not in loop")) (lambda (v) (error "not in loop"))))))))
-      (loop (restExpression expression) state))))
+      (loop expression state))))
               
 (define removeFirstPairFromState
   (lambda (state)
