@@ -19,7 +19,7 @@
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
-      ((eq? 'try (condition expression)) (M_state_Try expression state))
+      ((eq? 'try (condition expression)) (M_state_Try (body expression) state))
       ((eq? 'throw (condition expression)) (break state))
       (else (M_boolean(expression) state)))))
 
@@ -72,11 +72,12 @@
 (define addLayer cons)
 (define restOfStates cadr)
 (define value cadr)
+(define isListNull cdr)
 (define variable car)
 ; don't need cps
 (define M_declare
   (lambda (expression state)
-    (if (null? (value expression))
+    (if (null? (isListNull expression))
         (addToFrontOfState (variable expression) 'null state)
         (assignValue-cps (variable expression) (M_value (value expression) state) (addToFrontOfState(variable expression) 'null state) (lambda (v) v)))))
 
@@ -151,9 +152,9 @@
   (lambda (break state)
     (break (removeTopLayer state))))
 
-(define tryBlock cadr)
-(define 2ndExpression caddr)
-(define 3rdExpression cdddr)
+(define tryBlock car)
+(define 2ndExpression cadr)
+(define 3rdExpression cddr)
 (define M_state_Try
   (lambda (expression state)
     (cond
@@ -182,21 +183,21 @@
 
 (define M_state_TryCatchFinally
   (lambda (expression state)
-    (call/cc
+    (TryEvaluate (3rdExpression expression) (TryEvaluate (car (restExpression (2ndExpression expression))) (call/cc
      (lambda (throw)
        (letrec ((loop (lambda (expression state)
                         (if (null? expression)
                             state
-                            (loop (restExpression expression) (M_state (1stExpression expression) state throw (lambda (v) (error "not in loop")) (lambda (v) (error "not in loop"))))))))
-         (loop expression state))))))
+                            (loop (restExpression expression) (M_state (1stExpression expression) state (lambda (v) v) throw (lambda (v) (error "not in loop"))))))))
+         (loop (tryBlock expression) state))))))))
 
 (define TryEvaluate
   (lambda (expression state)
     (letrec ((loop (lambda (expression state)
                      (if (null? expression)
                          state
-                         (loop (restExpression expression) (M_state (1stExpression expression) state (lambda (v) (error "not in loop")) (lambda (v) (error "not in loop"))))))))
-      (loop expression state))))
+                         (loop (restExpression expression) (M_state (1stExpression expression) state (lambda (v) v) (lambda (v) (error "not in loop")) (lambda (v) (error "not in loop"))))))))
+      (loop (restExpression expression) state))))
               
 (define removeFirstPairFromState
   (lambda (state)
