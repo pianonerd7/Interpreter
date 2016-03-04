@@ -8,19 +8,16 @@
 (define ifTrueExec caddr)
 (define elseExec cadddr)
 (define M_state
-  (lambda (expression state)
-    (letrec
-        ((loop (lambda (expression state)
-                 (cond
-                   ((null? expression) state)
-                   ((eq? 'var (condition expression)) (M_declare (body expression) state))
-                   ((eq? '= (condition expression)) (M_assignment (body expression) state))
-                   ((eq? 'return (condition expression)) (M_return expression state (lambda(v) v)))
-                   ((eq? 'if (condition expression)) (M_state_If expression state))
-                   ((eq? 'while (condition expression)) (M_state_While expression state))
-                   ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state continue break))
-                   ((eq? 'continue (condition expression)) (M_state_Continue (body expression) continue state))
-                   (else (M_boolean(expression) state)))))
+  (lambda (expression state rtn break)
+    (cond
+      ((null? expression) state)
+      ((eq? 'var (condition expression)) (M_declare (body expression) state))
+      ((eq? '= (condition expression)) (M_assignment (body expression) state))
+      ((eq? 'return (condition expression)) (rtn (M_boolean (body expression) state)))
+      ((eq? 'if (condition expression)) (M_state_If expression state))
+      ((eq? 'while (condition expression)) (M_state_While expression state))
+      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state (lambda (v) v) break))
+      (else (M_boolean(expression) state)))))
          
 (define boolean_operator car)
 (define leftCondition cadr)
@@ -176,15 +173,15 @@
 (define evaluate
   (lambda (expressions state)
     (call/cc
-     (lambda (exit)
+     (lambda (rtn)
        (letrec ((loop (lambda (expressions state)
                         (cond
                           ((null? expressions) (exit state))
-                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state)))))))
+                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn (lambda (v) v))))))))
          (loop expressions state))))))
 
 (define initialState '(()()))
-                
+
 (define interpret
   (lambda (filename)
     (evaluate (parser filename) initialState)))
