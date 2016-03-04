@@ -18,7 +18,8 @@
       ((eq? 'while (condition expression)) (M_state_While expression state rtn))
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
-      ((eq? 'break (condition expression)) (break state))
+      ((eq? 'break (condition expression)) (M_state_Break break state))
+      ((eq? 'try (condition expression)) (M_state_Try))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -103,6 +104,14 @@
   (lambda (expression state rtn)
     (rtn (M_boolean expression state))))
 
+(define M_state_If
+  (lambda (expression state rtn break continue)
+    (if (M_boolean (ifBody expression) state)
+        (M_state (ifTrueExec expression) state rtn break continue)
+        (if (null? (cdddr expression))
+            state
+            (M_state (elseExec expression) state rtn break continue)))))
+
 (define M_state_While
   (lambda (expression state rtn)
     (whileLoop (ifBody expression) (ifTrueExec expression) state rtn)))
@@ -117,17 +126,32 @@
                             state))))
          (loop condition body state))))))
 
-(define M_state_If
+(define removeTopLayer cadr)
+(define M_state_Begin
   (lambda (expression state rtn break continue)
-    (if (M_boolean (ifBody expression) state)
-        (M_state (ifTrueExec expression) state rtn break continue)
-        (if (null? (cdddr expression))
-            state
-            (M_state (elseExec expression) state rtn break continue)))))
+    (removeTopLayer
+     (call/cc
+      (lambda (continue)
+        (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break continue))))))
+
+(define firstExpression car)
+(define restExpression cdr)
+(define executeBegin
+  (lambda (expression state rtn break continue)
+    (if (null? expression)
+        state
+        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn break continue) rtn break continue))))
 
 (define M_state_Continue
   (lambda (continue state)
     (continue state)))
+
+(define M_state_Break
+  (lambda (break state)
+    (break (removeTopLayer state))))
+
+(define M_state_Try
+  (lambda ()))
 
 (define removeFirstPairFromState
   (lambda (state)
@@ -146,22 +170,6 @@
 (define consEmptyListToState
   (lambda (state)
     (cons state '())))
-
-(define removeTopLayer cadr)
-(define M_state_Begin
-  (lambda (expression state rtn break continue)
-    (removeTopLayer
-     (call/cc
-      (lambda (continue)
-        (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break continue))))))
-
-(define firstExpression car)
-(define restExpression cdr)
-(define executeBegin
-  (lambda (expression state rtn break continue)
-    (if (null? expression)
-        state
-        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn break continue) rtn break continue))))
 
 (define searchVariable
   (lambda (var state return)
