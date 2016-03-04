@@ -8,18 +8,19 @@
 (define ifTrueExec caddr)
 (define elseExec cadddr)
 (define M_state
-  (lambda (expression state rtn break)
+  (lambda (expression state rtn break continue)
     (cond
       ((null? expression) state)
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
       ((eq? '= (condition expression)) (M_assignment (body expression) state))
       ((eq? 'return (condition expression)) (M_return (body expression) state rtn))
       ((eq? 'if (condition expression)) (M_state_If expression state rtn))
-      ((eq? 'while (condition expression)) (M_state_While expression state rtn))
-      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break))
+      ((eq? 'while (condition expression)) (M_state_While expression state rtn continue))
+      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue))
+      ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (break state))
       (else (M_boolean(expression) state)))))
-         
+
 (define boolean_operator car)
 (define leftCondition cadr)
 (define rightCondition caddr)
@@ -103,18 +104,18 @@
     (rtn (M_boolean expression state))))
 
 (define M_state_While
-  (lambda (expression state rtn)
-    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn)))
+  (lambda (expression state rtn continue)
+    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn continue)))
 
 (define whileLoop
-  (lambda (condition body state rtn)
+  (lambda (condition body state rtn continue)
     (call/cc
      (lambda (break)
-       (letrec ((loop (lambda (condition body state)
+       (letrec ((loop (lambda (condition body state continue)
                         (if (M_boolean condition state)
-                            (loop condition body (M_state body state rtn break))
+                            (loop condition body (M_state body state rtn break continue) continue)
                             state))))
-         (loop condition body state))))))
+         (loop condition body state continue))))))
 
 (define M_state_If
   (lambda (expression state rtn)
@@ -125,9 +126,9 @@
             (M_state (elseExec expression) state rtn)))))
 
 (define M_state_Continue
-  (lambda (expression continue state)
+  (lambda (continue state)
     (continue state)))
-           
+
 (define removeFirstPairFromState
   (lambda (state)
     (cond
@@ -148,16 +149,16 @@
 
 (define removeTopLayer cadr)
 (define M_state_Begin
-  (lambda (expression state rtn break)
-    (removeTopLayer (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break))))
+  (lambda (expression state rtn break continue)
+    (removeTopLayer (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break continue))))
 
 (define firstExpression car)
 (define restExpression cdr)
 (define executeBegin
-  (lambda (expression state rtn break)
+  (lambda (expression state rtn break continue)
     (if (null? expression)
         state
-        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn break) rtn break))))
+        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn break continue) rtn break continue))))
 
 (define searchVariable
   (lambda (var state return)
@@ -178,7 +179,7 @@
        (letrec ((loop (lambda (expressions state)
                         (cond
                           ((null? expressions) (rtn state))
-                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn (lambda (v) v))))))))
+                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn (lambda (v) v) (lambda (v) v))))))))
          (loop expressions state))))))
 
 (define initialState '(()()))
