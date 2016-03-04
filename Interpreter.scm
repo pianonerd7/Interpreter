@@ -19,7 +19,8 @@
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
-      ((eq? 'try (condition expression)) (M_state_Try))
+      ((eq? 'try (condition expression)) (M_state_Try expression state))
+      ((eq? 'throw (condition expression)) (M_state_Catch (body expression) state))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -150,8 +151,32 @@
   (lambda (break state)
     (break (removeTopLayer state))))
 
+(define tryBlock cadr)
+(define 2ndExpression caddr)
+(define 3rdExpression cdddr)
 (define M_state_Try
-  (lambda ()))
+  (lambda (expression state)
+    (cond
+      ;case of try/catch and finally
+      ((and (eq? (car (2ndExpression expression)) 'catch) (pair? (3rdExpression expression))) (M_state_TryCatchFinally expression (addLayer initialState (consEmptyListToState state))))
+      ;case of try/catch
+      ((eq? (car (2ndExpression expression)) 'catch) (M_state_TryCatch expression (addLayer initialState (consEmptyListToState state))))
+      ;case of try/finally
+      ((eq? (car (2ndExpression expression)) 'finally) (M_state_TryFinally expression (addLayer initialState (consEmptyListToState state))))
+      (else (error 'unknown "unknown expression")))))
+
+(define M_state_TryCatch
+  (lambda (expression state)
+    ()))
+
+(define M_state_TryFinally
+  (lambda (expression state)
+    (
+      ())))
+
+(define M_state_TryCatchFinally
+  (lambda (expression state)
+    ()))
 
 (define removeFirstPairFromState
   (lambda (state)
