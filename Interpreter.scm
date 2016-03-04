@@ -15,7 +15,7 @@
       ((eq? '= (condition expression)) (M_assignment (body expression) state))
       ((eq? 'return (condition expression)) (M_return (body expression) state rtn))
       ((eq? 'if (condition expression)) (M_state_If expression state rtn))
-      ((eq? 'while (condition expression)) (M_state_While expression state rtn continue))
+      ((eq? 'while (condition expression)) (M_state_While expression state rtn))
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (break state))
@@ -104,18 +104,18 @@
     (rtn (M_boolean expression state))))
 
 (define M_state_While
-  (lambda (expression state rtn continue)
-    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn continue)))
+  (lambda (expression state rtn)
+    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn)))
 
 (define whileLoop
-  (lambda (condition body state rtn continue)
+  (lambda (condition body state rtn)
     (call/cc
      (lambda (break)
-       (letrec ((loop (lambda (condition body state continue)
+       (letrec ((loop (lambda (condition body state)
                         (if (M_boolean condition state)
-                            (loop condition body (M_state body state rtn break continue) continue)
+                            (loop condition body (M_state body state rtn break (lambda (v) v)))
                             state))))
-         (loop condition body state continue))))))
+         (loop condition body state))))))
 
 (define M_state_If
   (lambda (expression state rtn)
@@ -150,7 +150,10 @@
 (define removeTopLayer cadr)
 (define M_state_Begin
   (lambda (expression state rtn break continue)
-    (removeTopLayer (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break continue))))
+    (removeTopLayer
+     (call/cc
+      (lambda (continue)
+        (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break continue))))))
 
 (define firstExpression car)
 (define restExpression cdr)
