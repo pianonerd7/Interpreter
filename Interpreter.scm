@@ -14,7 +14,7 @@
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
       ((eq? '= (condition expression)) (M_assignment (body expression) state))
       ((eq? 'return (condition expression)) (M_return (body expression) state rtn))
-      ((eq? 'if (condition expression)) (M_state_If expression state rtn))
+      ((eq? 'if (condition expression)) (M_state_If expression state rtn break continue))
       ((eq? 'while (condition expression)) (M_state_While expression state rtn))
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
@@ -118,12 +118,12 @@
          (loop condition body state))))))
 
 (define M_state_If
-  (lambda (expression state rtn)
+  (lambda (expression state rtn break continue)
     (if (M_boolean (ifBody expression) state)
-        (M_state (ifTrueExec expression) state rtn)
+        (M_state (ifTrueExec expression) state rtn break continue)
         (if (null? (cdddr expression))
             state
-            (M_state (elseExec expression) state rtn)))))
+            (M_state (elseExec expression) state rtn break continue)))))
 
 (define M_state_Continue
   (lambda (continue state)
