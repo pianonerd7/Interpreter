@@ -8,7 +8,7 @@
 (define ifTrueExec caddr)
 (define elseExec cadddr)
 (define M_state
-  (lambda (expression state rtn)
+  (lambda (expression state rtn break)
     (cond
       ((null? expression) state)
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
@@ -16,7 +16,8 @@
       ((eq? 'return (condition expression)) (M_return (body expression) state rtn))
       ((eq? 'if (condition expression)) (M_state_If expression state rtn))
       ((eq? 'while (condition expression)) (M_state_While expression state rtn))
-      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn))
+      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break))
+      ((eq? 'break (condition expression)) (break state))
       (else (M_boolean(expression) state)))))
          
 (define boolean_operator car)
@@ -111,7 +112,7 @@
      (lambda (break)
        (letrec ((loop (lambda (condition body state)
                         (if (M_boolean condition state)
-                            (loop condition body (M_state body state rtn))
+                            (loop condition body (M_state body state rtn break))
                             state))))
          (loop condition body state))))))
 
@@ -147,16 +148,16 @@
 
 (define removeTopLayer cadr)
 (define M_state_Begin
-  (lambda (expression state rtn)
-    (removeTopLayer (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn))))
+  (lambda (expression state rtn break)
+    (removeTopLayer (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break))))
 
 (define firstExpression car)
 (define restExpression cdr)
 (define executeBegin
-  (lambda (expression state rtn)
+  (lambda (expression state rtn break)
     (if (null? expression)
         state
-        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn) rtn))))
+        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn break) rtn break))))
 
 (define searchVariable
   (lambda (var state return)
@@ -177,7 +178,7 @@
        (letrec ((loop (lambda (expressions state)
                         (cond
                           ((null? expressions) (rtn state))
-                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn)))))))
+                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn (lambda (v) v))))))))
          (loop expressions state))))))
 
 (define initialState '(()()))
