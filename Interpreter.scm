@@ -215,7 +215,7 @@
        (letrec ((loop (lambda (expressions state)
                         (cond
                           ((null? expressions) (rtn state))
-                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn (lambda (v) v) (lambda (v) v))))))))
+                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn (lambda (v) (error 'not in loop)) (lambda (v) (error 'not in loop))))))))
          (loop expressions state))))))
 
 (define initialState '(()()))
