@@ -8,17 +8,20 @@
 (define ifTrueExec caddr)
 (define elseExec cadddr)
 (define M_state
-  (lambda (expression state continue break)
-    (cond
-      ((null? expression) state)
-      ((eq? 'var (condition expression)) (M_declare (body expression) state))
-      ((eq? '= (condition expression)) (M_assignment (body expression) state))
-      ((eq? 'return (condition expression)) (M_boolean (body expression) state))
-      ((eq? 'if (condition expression)) (M_state_If expression state))
-      ((eq? 'while (condition expression)) (M_state_While expression state))
-      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state continue break))
-      (else (M_boolean(expression) state)))))
-
+  (lambda (expression state)
+    (letrec
+        ((loop (lambda (expression state)
+                 (cond
+                   ((null? expression) state)
+                   ((eq? 'var (condition expression)) (M_declare (body expression) state))
+                   ((eq? '= (condition expression)) (M_assignment (body expression) state))
+                   ((eq? 'return (condition expression)) (M_return expression state (lambda(v) v)))
+                   ((eq? 'if (condition expression)) (M_state_If expression state))
+                   ((eq? 'while (condition expression)) (M_state_While expression state))
+                   ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state continue break))
+                   ((eq? 'continue (condition expression)) (M_state_Continue (body expression) continue state))
+                   (else (M_boolean(expression) state)))))
+         
 (define boolean_operator car)
 (define leftCondition cadr)
 (define rightCondition caddr)
@@ -98,11 +101,8 @@
       (else (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (return (addToFrontOfState (car (variables (topLayerState state))) (car (vals (topLayerState state))) v))))))))
 
 (define M_return
-  (lambda (expression state)
-    (cond
-     ((number? (car expression)) (car expression))
-     ((list? (car expression)) (M_return (cons (M_value (car expression) state) '()) state))
-     (else (searchVariable (car expression) state)))))
+  (lambda (expression state return)
+    (return (M_boolean (body expression) state))))
 
 (define M_state_While
   (lambda (expression state)
@@ -117,7 +117,6 @@
                             (loop condition body (M_state body state (lambda (v) v) break))
                             state))))
          (loop condition body state))))))
-           
 
 (define M_state_If
   (lambda (expression state)
@@ -127,6 +126,10 @@
             state
             (M_state (elseExec expression) state (lambda (v) v) (lambda (v) v))))))
 
+(define M_state_Continue
+  (lambda (expression continue state)
+    (continue state)))
+           
 (define removeFirstPairFromState
   (lambda (state)
     (cond
@@ -137,9 +140,9 @@
 (define addToFrontOfState
   (lambda (var value state)
     (cond 
-    ((equal? state initialState) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
-    ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
-    (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
+      ((equal? state initialState) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
+      ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
+      (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
 
 (define consEmptyListToState
   (lambda (state)
@@ -161,25 +164,27 @@
 (define searchVariable
   (lambda (var state return)
     (cond
-      ((null? state) (return 'empty))
+      ((or (null? state)(null? (vals state))) (return 'empty))
       ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (firstVal (vals state))))
       ((not (list? (variables (topLayerState state)))) (return (searchVariable var (removeFirstPairFromState state) (lambda (v)(return v)))))
       ((null? (vals (topLayerState state))) (return (searchVariable var (restLayerState state) (lambda (v) (return v)))))
       ((eq? (firstVar (variables (topLayerState state))) var) (return (firstVal (vals (topLayerState state)))))
       (else (searchVariable var (removeFirstPairFromState state) (lambda (v) (return v)))))))
-      
+
 (define 1stExpression car)
 (define restOfExpression cdr)
 (define evaluate
   (lambda (expressions state)
-    (cond
-      ((null? expressions) state)
-      ((eq? (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state (lambda (v) v) (lambda (v) v))) #t) 'true)
-      ((eq? (evaluate (restOfExpression expressions) (M_state (1stExpression expressions) state (lambda (v) v) (lambda (v) v))) #f) 'false)
-      (else (evaluate(restOfExpression expressions) (M_state (1stExpression expressions) state (lambda (v) v) (lambda (v) v)))))))
+    (call/cc
+     (lambda (exit)
+       (letrec ((loop (lambda (expressions state)
+                        (cond
+                          ((null? expressions) (exit state))
+                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state)))))))
+         (loop expressions state))))))
 
 (define initialState '(()()))
-
+                
 (define interpret
   (lambda (filename)
     (evaluate (parser filename) initialState)))
