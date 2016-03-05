@@ -161,12 +161,40 @@
 
 (define M_state_Try
   (lambda (expression state)
+    (cond
+      ;case of try/catch and finally
+      ((and (eq? (car (2ndExpression expression)) 'catch) (not (null? (3rdExpression expression)))) (M_state_TryCatchFinally expression state))
+      ;case of try/catch
+      ((eq? (car (2ndExpression expression)) 'catch) (M_state_TryCatch expression state))
+      ;case of try/finally
+      ((eq? (car (2ndExpression expression)) 'finally) (M_state_TryFinally expression (addLayer initialState (consEmptyListToState state))))
+      (else (error 'unknown "unknown expression")))))
+
+(define M_state_TryCatchFinally
+  (lambda (expression state)
     (M_state_Finally (cadar (3rdExpression expression))
+                     (call/cc
+                      (lambda (try)
+                        (if (null? expression)
+                            state
+                            (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) (caddr (2ndExpression expression)))))))))
+
+(define M_state_TryCatch
+  (lambda (expression state)
     (call/cc
      (lambda (try)
        (if (null? expression)
            state
-           (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) (caddr (2ndExpression expression)))))))))
+           (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) (caddr (2ndExpression expression))))))))
+
+(define M_state_TryFinally
+  (lambda (expression state)
+    (M_state_Finally (cadar (3rdExpression expression))
+                     (call/cc
+                      (lambda (try)
+                        (if (null? expression)
+                            state
+                            (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) '())))))))
 
 (define M_state_Catch
   (lambda (expression state catchExpressions break)
@@ -212,6 +240,13 @@
       ((eq? (firstVar (variables (topLayerState state))) var) (return (firstVal (vals (topLayerState state)))))
       (else (searchVariable var (removeFirstPairFromState state) (lambda (v) (return v)))))))
 
+(define isEmpty
+  (lambda (list)
+    (cond
+      ((null? list) 'yes)
+      ((pair? list) (isEmpty (car list)))
+      (else 'no))))
+    
 (define 1stExpression car)
 (define restOfExpression cdr)
 (define evaluate
