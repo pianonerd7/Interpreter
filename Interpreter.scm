@@ -20,7 +20,7 @@
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
       ((eq? 'try (condition expression)) (M_state_Try (body expression) state))
-      ((eq? 'throw (condition expression)) (M_state(break state)))
+      ((eq? 'throw (condition expression)) (M_state_Catch (body expression) state))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -158,48 +158,23 @@
 (define catchBody
   (lambda (expression)
     (caddr (2ndExpression expression))))
+
 (define M_state_Try
   (lambda (expression state)
-    ;case of try/catch and finally
-    ((and (eq? (car (2ndExpression expression)) 'catch) (pair? (3rdExpression expression))) (M_state_TryCatchFinally expression (addLayer initialState (consEmptyListToState state))))
-    ;case of try/catch
-    ((eq? (car (2ndExpression expression)) 'catch) (M_state_TryCatch expression (addLayer initialState (consEmptyListToState state))))
-    ;case of try/finally
-    ((eq? (car (2ndExpression expression)) 'finally) (M_state_TryFinally expression (addLayer initialState (consEmptyListToState state))))
-    (else (error 'unknown "unknown expression"))))
-
-(define M_state_TryCatch
-  (lambda (expression state)
-    (call/cc
-     (lambda (throw)
-       (letrec ((loop (lambda (expression state)
-                        (cond
-                          ((null? expression) state)
-                          (loop (restExpression expression) (M_state (1stExpression expression) state throw (lambda (v) (error "not in loop"))))))))
-         (loop expression state))))))
-
-(define M_state_TryFinally
-  (lambda (expression state)
-    (TryEvaluate (2ndExpression expression)
-                 (letrec ((loop (lambda (expression state)
-                                  (if (null? expression)
-                                      state
-                                      (loop (restExpression expression) (M_state (1stExpression expression) state (lamda (v) v) (lambda (v) v) (lambda (v) (error "not in loop"))))))))
-                   (loop (tryBlock expression) state)))))
-
-(define M_state_TryCatchFinally
-  (lambda (expression state)
-    (TryEvaluate (cadar (3rdExpression expression))
-                 (call/cc
-                  (lambda (skip)
-                    (TryEvaluate (catchBody expression)
-                                 (call/cc
-                                  (lambda (throw)
-                                    (letrec ((loop (lambda (expression state)
-                                                     (if (null? expression)
-                                                         (skip state)
-                                                         (loop (restExpression expression) (M_state (1stExpression expression) state (lambda (v) v) throw (lambda (v) (error "not in loop"))))))))
-                                      (loop (tryBlock expression) state))))))))))
+    (cond
+      (TryEvaluate (cadar (3rdExpression expression))
+                   (call/cc
+                    (lambda (jump)
+                      (M_state_Catch (catchBody expression) 
+                                     (call/cc
+                                      (lambda (throw)
+                                        (if (null? expression)
+                                            (jump state)
+                                            (M_state (cons 'begin (car expression)) state (lambda (v) v) throw (lambda (v) (error "not in loop")))))) state)))))))
+                   
+(define M_state_Catch
+  (lambda (expression e state)
+    ()))
 
 (define TryEvaluate
   (lambda (expression state)
