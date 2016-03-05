@@ -11,9 +11,9 @@
   (lambda (expression state rtn break continue catch)
     (cond
       ((null? expression) state)
-      ((eq? 'var (condition expression)) (M_declare (body expression) state catch))
-      ((eq? '= (condition expression)) (M_assignment (body expression) state catch))
-      ((eq? 'return (condition expression)) (M_return (body expression) state rtn catch))
+      ((eq? 'var (condition expression)) (M_declare (body expression) state))
+      ((eq? '= (condition expression)) (M_assignment (body expression) state))
+      ((eq? 'return (condition expression)) (M_return (body expression) state rtn))
       ((eq? 'if (condition expression)) (M_state_If expression state rtn break continue catch))
       ((eq? 'while (condition expression)) (M_state_While expression state rtn catch))
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue catch))
@@ -107,42 +107,42 @@
     (rtn (M_boolean expression state))))
 
 (define M_state_If
-  (lambda (expression state rtn break continue)
+  (lambda (expression state rtn break continue catch)
     (if (M_boolean (ifBody expression) state)
-        (M_state (ifTrueExec expression) state rtn break continue '())
+        (M_state (ifTrueExec expression) state rtn break continue catch)
         (if (null? (cdddr expression))
             state
-            (M_state (elseExec expression) state rtn break continue '())))))
+            (M_state (elseExec expression) state rtn break continue catch)))))
 
 (define M_state_While
-  (lambda (expression state rtn)
-    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn)))
+  (lambda (expression state rtn catch)
+    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn catch)))
 
 (define whileLoop
-  (lambda (condition body state rtn)
+  (lambda (condition body state rtn catch)
     (call/cc
      (lambda (break)
        (letrec ((loop (lambda (condition body state)
                         (if (M_boolean condition state)
-                            (loop condition body (M_state body state rtn break (lambda (v) v) '()))
+                            (loop condition body (M_state body state rtn break (lambda (v) v) catch))
                             state))))
          (loop condition body state))))))
 
 (define removeTopLayer cadr)
 (define M_state_Begin
-  (lambda (expression state rtn break continue)
+  (lambda (expression state rtn break continue catch)
     (removeTopLayer
      (call/cc
       (lambda (continue)
-        (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break continue))))))
+        (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break continue catch))))))
 
 (define firstExpression car)
 (define restExpression cdr)
 (define executeBegin
-  (lambda (expression state rtn break continue)
+  (lambda (expression state rtn break continue catch)
     (if (null? expression)
         state
-        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn break continue '()) rtn break continue))))
+        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn break continue catch) rtn break continue catch))))
 
 (define M_state_Continue
   (lambda (continue state)
@@ -166,7 +166,7 @@
      (lambda (try)
        (if (null? expression)
            state
-           (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) (car (caddr (2ndExpression expression))))))))))
+           (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) (caddr (2ndExpression expression)))))))))
 
 (define M_state_Catch
   (lambda (expression state catchExpressions break)
