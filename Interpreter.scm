@@ -11,16 +11,16 @@
   (lambda (expression state rtn break continue catch)
     (cond
       ((null? expression) state)
-      ((eq? 'var (condition expression)) (M_declare (body expression) state))
-      ((eq? '= (condition expression)) (M_assignment (body expression) state))
-      ((eq? 'return (condition expression)) (M_return (body expression) state rtn))
-      ((eq? 'if (condition expression)) (M_state_If expression state rtn break continue))
-      ((eq? 'while (condition expression)) (M_state_While expression state rtn))
-      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue))
+      ((eq? 'var (condition expression)) (M_declare (body expression) state catch))
+      ((eq? '= (condition expression)) (M_assignment (body expression) state catch))
+      ((eq? 'return (condition expression)) (M_return (body expression) state rtn catch))
+      ((eq? 'if (condition expression)) (M_state_If expression state rtn break continue catch))
+      ((eq? 'while (condition expression)) (M_state_While expression state rtn catch))
+      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue catch))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
       ((eq? 'try (condition expression)) (M_state_Try (body expression) state))
-      ((eq? 'throw (condition expression)) (M_state_Catch (body expression) state))
+      ((eq? 'throw (condition expression)) (M_state_Catch (car (body expression)) state catch rtn))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -166,11 +166,11 @@
      (lambda (try)
        (if (null? expression)
            state
-           (M_state (cons 'begin (car expression)) state (lambda (v) v) (lambda (v) v) (lambda (v) (error "not in loop")) (catchBody expression))))))))
+           (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) (car (caddr (2ndExpression expression))))))))))
 
 (define M_state_Catch
-  (lambda (expression e state catchExpressions break)
-    (TryEvaluate catchExpressions (addToFrontOfState e expression (addLayer initialState (consEmptyListToState state))) break)))
+  (lambda (expression state catchExpressions break)
+    (TryEvaluate catchExpressions (addToFrontOfState 'e expression (addLayer initialState (consEmptyListToState state))) break)))
 
 (define M_state_Finally
   (lambda (expression state)
