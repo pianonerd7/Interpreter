@@ -198,7 +198,7 @@
 
 (define M_state_Catch
   (lambda (expression state catchExpressions break)
-    (TryEvaluateCatch catchExpressions (addToFrontOfState 'e expression (addLayer initialState (consEmptyListToState (removeTopLayer state)))) break)))
+    (TryEvaluate catchExpressions (addToFrontOfState 'e expression (addLayer initialState (consEmptyListToState (removeTopLayer state)))) break)))
 
 (define TryEvaluateCatch
   (lambda (expression state break)
