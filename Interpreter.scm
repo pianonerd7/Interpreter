@@ -21,8 +21,8 @@
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue throw))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
-      ((eq? 'try (condition expression)) (m-state-tcf expression state rtn break continue throw))
-      ((eq? 'throw (condition expression)) (m-state-throw expression state throw))
+      ((eq? 'try (condition expression)) (M_state_tryCatchFinally expression state rtn break continue throw))
+      ((eq? 'throw (condition expression)) (M_state_throw expression state throw))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -175,12 +175,12 @@
 (define finally-stmt (lambda (t) (car (cdddr t))))
 (define finally-body (lambda (t) (cadr (car (cdddr t)))))
 
-(define m-state-throw
+(define M_state_throw
   (lambda (statement state throw)
     (throw (except-stmt statement) state)))
 (define except-stmt cadr)
 
-(define m-state-tcf
+(define M_state_tryCatchFinally
   (lambda (statement state prog-return break continue throw)
     (call/cc
      (lambda (try-break)
@@ -281,7 +281,7 @@
     (error "continue not in loop")))
 
 (define default_throw
-  (lambda (v)
+  (lambda (statment state)
     (error "throw without catch")))
 
 ;Parses a file and sends to the evaluate function
