@@ -21,8 +21,8 @@
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue throw))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
-      ((eq? 'try (condition expression)) (m-state-tcf expression state break continue throw))
-      ((eq? 'throw (condition expression)) (M_state_Catch (car (body expression)) state throw rtn))
+      ((eq? 'try (condition expression)) (m-state-tcf expression state break continue throw rtn))
+      ((eq? 'throw (condition expression)) (m-state-throw (car (body expression)) state throw rtn))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -208,6 +208,14 @@
       ((pair? (car l)) (replace*-cps old new (cdr l) (lambda (v) (replace*-cps old new (car l) (lambda (v2) (return (cons v2 v)))))))
       ((eq? (car l) old) (replace*-cps old new (cdr l) (lambda (v) (return (cons new v)))))
       (else (replace*-cps old new (cdr l) (lambda (v) (return (cons (car l) v))))))))
+
+(define run-state
+    (lambda (pt state break continue throw prog-return)
+      (if (null? pt)
+          state
+          (run-state (cdr pt)
+                     (M_state (car pt) state prog-return break continue throw)
+                     prog-return break continue throw))))
 
 ;Removes the first pair of var and value from the state
 (define removeFirstPairFromState
