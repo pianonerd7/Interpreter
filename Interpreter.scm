@@ -16,13 +16,13 @@
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
       ((eq? '= (condition expression)) (M_assignment (body expression) state))
       ((eq? 'return (condition expression)) (M_return (body expression) state rtn))
-      ((eq? 'if (condition expression)) (M_state_If expression state rtn break continue catch))
-      ((eq? 'while (condition expression)) (M_state_While expression state rtn catch))
-      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue catch))
+      ((eq? 'if (condition expression)) (M_state_If expression state rtn break continue throw))
+      ((eq? 'while (condition expression)) (M_state_While expression state rtn throw))
+      ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue throw))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
-      ((eq? 'try (condition expression)) (m-state-tcf expression state break continue catch))
-      ((eq? 'throw (condition expression)) (M_state_Catch (car (body expression)) state catch rtn))
+      ((eq? 'try (condition expression)) (m-state-tcf expression state break continue throw))
+      ((eq? 'throw (condition expression)) (M_state_Catch (car (body expression)) state throw rtn))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -116,47 +116,47 @@
 
 ;Evaluates the condition of an if statement, if true, then it executes, exit otherwise
 (define M_state_If
-  (lambda (expression state rtn break continue catch)
+  (lambda (expression state rtn break continue throw)
     (if (M_boolean (ifBody expression) state)
-        (M_state (ifTrueExec expression) state rtn break continue catch)
+        (M_state (ifTrueExec expression) state rtn break continue throw)
         (if (null? (cdddr expression))
             state
-            (M_state (elseExec expression) state rtn break continue catch)))))
+            (M_state (elseExec expression) state rtn break continue throw)))))
 
 ;Sends the condition, body and necessary arguments to whileLoop for call/cc
 (define M_state_While
-  (lambda (expression state rtn catch)
-    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn catch)))
+  (lambda (expression state rtn throw)
+    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn throw)))
 
 ;Loops until the condition becomes false, then exits, or break is called and exits, or continue is called
 ;and goes onto the next iteration
 (define whileLoop
-  (lambda (condition body state rtn catch)
+  (lambda (condition body state rtn throw)
     (call/cc
      (lambda (break)
        (letrec ((loop (lambda (condition body state)
                         (if (M_boolean condition state)
-                            (loop condition body (M_state body state rtn break (lambda (v) v) catch))
+                            (loop condition body (M_state body state rtn break (lambda (v) v) throw))
                             state))))
          (loop condition body state))))))
 
 (define removeTopLayer cadr)
 ;When a block of code is given, it creates a new layer and add to the top of the state. Then continues to send each expression M_state
 (define M_state_Begin
-  (lambda (expression state rtn break continue catch)
+  (lambda (expression state rtn break continue throw)
     (removeTopLayer
      (call/cc
       (lambda (continue)
-        (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break continue catch))))))
+        (executeBegin expression (addLayer initialState (consEmptyListToState state)) rtn break continue throw))))))
 
 (define firstExpression car)
 (define restExpression cdr)
 ;Helper function of M_state_begin, passes expression by expression to M_state
 (define executeBegin
-  (lambda (expression state rtn break continue catch)
+  (lambda (expression state rtn break continue throw)
     (if (null? expression)
         state
-        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn break continue catch) rtn break continue catch))))
+        (executeBegin (restExpression expression) (M_state (firstExpression expression) state rtn break continue throw) rtn break continue throw))))
 
 ;Continues to the next iteration of the loop
 (define M_state_Continue
