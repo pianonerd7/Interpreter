@@ -21,8 +21,8 @@
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue throw))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
-      ((eq? 'try (condition expression)) (m-state-tcf expression state break continue throw rtn))
-      ((eq? 'throw (condition expression)) (m-state-throw (car (body expression)) state throw rtn))
+      ((eq? 'try (condition expression)) (m-state-tcf expression state rtn break continue throw))
+      ((eq? 'throw (condition expression)) (m-state-throw expression state throw))
       (else (M_boolean(expression) state)))))
 
 (define boolean_operator car)
@@ -181,24 +181,24 @@
 (define except-stmt cadr)
 
 (define m-state-tcf
-  (lambda (statement state break continue throw prog-return)
+  (lambda (statement state prog-return break continue throw)
     (call/cc
      (lambda (try-break)
        (letrec ((finally (lambda (s)
                     (cond
                       ((null? (finally-stmt statement)) s)
-                      ((list? (car (finally-body statement))) (run-state (finally-body statement) s break continue throw prog-return))
-                      (else (m-state (finally-body statement) s break continue throw prog-return)))))
+                      ((list? (car (finally-body statement))) (run-state (finally-body statement) s prog-return break continue throw))
+                      (else (m-state (finally-body statement) s prog-return break continue throw)))))
 
                 (try (lambda (s try-throw)
                        (if (list? (car (try-body statement)))
-                           (finally (run-state (try-body statement) s break continue try-throw prog-return))
-                           (finally (m-state (try-body statement) s break continue try-throw prog-return)))))
+                           (finally (run-state (try-body statement) s prog-return break continue try-throw))
+                           (finally (m-state (try-body statement) s prog-return break continue try-throw)))))
 
                 (catch (lambda (e s)
                          (if (list? (car (catch-body statement)))
-                             (finally (run-state (replace*-cps (catch-err statement) e (catch-body statement) (lambda (v) v)) s break continue throw prog-return))
-                             (finally (m-state (replace*-cps (catch-err statement) e (catch-body statement) (lambda (v) v)) s break continue throw prog-return))))))
+                             (finally (run-state (replace*-cps (catch-err statement) e (catch-body statement) (lambda (v) v)) s prog-return break continue throw))
+                             (finally (m-state (replace*-cps (catch-err statement) e (catch-body statement) (lambda (v) v)) s prog-return break continue throw))))))
          (try state (lambda (e s) (try-break (catch e s)))) )))))
 
 (define replace*-cps
@@ -210,7 +210,7 @@
       (else (replace*-cps old new (cdr l) (lambda (v) (return (cons (car l) v))))))))
 
 (define run-state
-    (lambda (pt state break continue throw prog-return)
+    (lambda (pt state prog-return break continue throw)
       (if (null? pt)
           state
           (run-state (cdr pt)
