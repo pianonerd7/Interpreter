@@ -10,7 +10,7 @@
 (define elseExec cadddr)
 ;M_state determines where to send expressions for execution
 (define M_state
-  (lambda (expression state rtn break continue catch)
+  (lambda (expression state rtn break continue throw)
     (cond
       ((null? expression) state)
       ((eq? 'var (condition expression)) (M_declare (body expression) state))
@@ -259,10 +259,22 @@
        (letrec ((loop (lambda (expressions state)
                         (cond
                           ((null? expressions) (rtn state))
-                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn (lambda (v) (error "not in loop")) (lambda (v) (error "not in loop")) '())))))))
+                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn default_break default_continue default_throw)))))))
          (loop expressions state))))))
 
 (define initialState '(()()))
+
+(define default_break
+  (lambda (v)
+    (error "break not in loop")))
+
+(define default_continue
+  (lambda (v)
+    (error "continue not in loop")))
+
+(define default_throw
+  (lambda (v)
+    (error "throw without catch")))
 
 ;Parses a file and sends to the evaluate function
 (define interpret
