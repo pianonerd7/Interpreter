@@ -1,6 +1,7 @@
 (load "simpleParser.scm")
 
 ;Anna He jxh604
+;Interpreter 2
 
 (define condition car)
 (define body cdr)
@@ -20,7 +21,7 @@
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue catch))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
-      ((eq? 'try (condition expression)) (M_state_Try (body expression) state catch))
+      ((eq? 'try (condition expression)) (m-state-tcf expression state break continue catch))
       ((eq? 'throw (condition expression)) (M_state_Catch (car (body expression)) state catch rtn))
       (else (M_boolean(expression) state)))))
 
@@ -167,76 +168,46 @@
   (lambda (break state)
     (break (removeTopLayer state))))
 
-(define tryBlock car)
-(define 2ndExpression cadr)
-(define 3rdExpression cddr)
-(define catchBody
-  (lambda (expression)
-    (caddr (2ndExpression expression))))
-;Try/Catch/Finally blocks are sent here, and are sent to respective functions based on whether they have try, catch, and or finally
-(define M_state_Try
-  (lambda (expression state catch)
-    (cond
-      ;case of try/catch and finally
-      ((and (eq? (isEmpty (2ndExpression expression)) 'no) (eq? (isEmpty (3rdExpression expression)) 'no)) (M_state_TryCatchFinally expression state catch))
-      ;case of try/catch
-      ((eq? (isEmpty (2ndExpression expression)) 'no) (M_state_TryCatch expression state catch))
-      ;case of try/finally
-      ((eq? (isEmpty (3rdExpression expression)) 'no) (M_state_TryFinally expression (addLayer initialState (consEmptyListToState state)) catch))
-      (else (error 'unknown "unknown expression")))))
+; (try body (catch (e) body) (finally body))
+(define try-body cadr)
+(define catch-body (lambda (t) (if (null? (cddr (caddr t)))  '()  (car (cddr (caddr t))))))
+(define catch-err (lambda (t) (car (cadr (caddr t)))))
+(define finally-stmt (lambda (t) (car (cdddr t))))
+(define finally-body (lambda (t) (cadr (car (cdddr t)))))
 
-;Loops through chunks of code and sends to M_state until a throw occurs and call/cc from M_state_Catch to here. Finally is then executed
-(define M_state_TryCatchFinally
-  (lambda (expression state catch)
-    (M_state_Finally (cadar (3rdExpression expression))
-                     (call/cc
-                      (lambda (try)
-                        (if (null? expression)
-                            state
-                            (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) (caddr (2ndExpression expression)))))))))
+(define m-state-throw
+  (lambda (statement state throw)
+    (throw (except-stmt statement) state)))
+(define except-stmt cadr)
 
-
-;Loops through chunks of code and sends to M_state until a throw occurs and call/cc from M_state_Catch to here. Since it is only
-;try and catch, the result will just be returned 
-(define M_state_TryCatch
-  (lambda (expression state catch)
+(define m-state-tcf
+  (lambda (statement state break continue throw prog-return)
     (call/cc
-     (lambda (try)
-       (if (null? expression)
-           state
-           (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) (caddr (2ndExpression expression))))))))
+     (lambda (try-break)
+       (letrec ((finally (lambda (s)
+                    (cond
+                      ((null? (finally-stmt statement)) s)
+                      ((list? (car (finally-body statement))) (run-state (finally-body statement) s break continue throw prog-return))
+                      (else (m-state (finally-body statement) s break continue throw prog-return)))))
 
+                (try (lambda (s try-throw)
+                       (if (list? (car (try-body statement)))
+                           (finally (run-state (try-body statement) s break continue try-throw prog-return))
+                           (finally (m-state (try-body statement) s break continue try-throw prog-return)))))
 
-;Loops through chunks of code and sends to M_state, finally is then executed
-(define M_state_TryFinally
-  (lambda (expression state catch)
-    (M_state_Finally (cadar (3rdExpression expression))
-                     (call/cc
-                      (lambda (try)
-                        (if (null? expression)
-                            state
-                            (M_state (cons 'begin (car expression)) state try (lambda (v) v) (lambda (v) (error "not in loop")) catch)))))))
+                (catch (lambda (e s)
+                         (if (list? (car (catch-body statement)))
+                             (finally (run-state (replace*-cps (catch-err statement) e (catch-body statement) (lambda (v) v)) s break continue throw prog-return))
+                             (finally (m-state (replace*-cps (catch-err statement) e (catch-body statement) (lambda (v) v)) s break continue throw prog-return))))))
+         (try state (lambda (e s) (try-break (catch e s)))) )))))
 
-;If a throw occurs, it is sent here. The thrown value and e is put ontop the top most layer of the state and evaulates the catch block. 
-(define M_state_Catch
-  (lambda (expression state catchExpressions break)
-    (TryEvaluate catchExpressions (addToFrontOfState 'e expression (addLayer initialState (consEmptyListToState (removeTopLayer state)))) break)))
-
-;Executes th finally block
-(define M_state_Finally
-  (lambda (expression state)
-    (TryEvaluate expression state (lambda (v) v))))
-
-;Loops through the catch block and executes until it is finished, then call/cc back to its respective try block
-;Loops through the finally block and executes until it is finished
-(define TryEvaluate
-  (lambda (expression state break)
-    (letrec ((loop (lambda (expression state)
-                     (cond
-                       ((null? expression) (break state))
-                       ((and (null? (cdr expression)) (eq? (caar expression) 'throw)) (error "you don't have the right to throw"))
-                       (else(loop (restExpression expression) (M_state (1stExpression expression) state break (lambda (v) (error "not in loop")) (lambda (v) (error "not in loop")) '())))))))
-      (loop expression state))))
+(define replace*-cps
+  (lambda (old new l return)
+    (cond
+      ((null? l) (return l))
+      ((pair? (car l)) (replace*-cps old new (cdr l) (lambda (v) (replace*-cps old new (car l) (lambda (v2) (return (cons v2 v)))))))
+      ((eq? (car l) old) (replace*-cps old new (cdr l) (lambda (v) (return (cons new v)))))
+      (else (replace*-cps old new (cdr l) (lambda (v) (return (cons (car l) v))))))))
 
 ;Removes the first pair of var and value from the state
 (define removeFirstPairFromState
