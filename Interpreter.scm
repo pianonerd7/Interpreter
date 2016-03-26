@@ -1,4 +1,4 @@
-(load "simpleParser.scm")
+(load "functionParser.scm")
 
 ;Anna He jxh604
 ;Interpreter 2
