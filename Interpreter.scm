@@ -32,7 +32,7 @@
   (lambda (expression state rtn break continue throw)
     (call/cc
      (lambda (return)
-       (run-state (car (cdr (searchVariable (fxn_name expression) state (lambda (v) v)))) state return break continue throw)))))
+       (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) state return break continue throw)))))
 
 (define fxn_name cadr)
 (define fxn_parameter caddr)
