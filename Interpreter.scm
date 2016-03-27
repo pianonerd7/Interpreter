@@ -23,8 +23,16 @@
       ((eq? 'try (condition expression)) (M_state_tryCatchFinally expression state rtn break continue throw))
       ((eq? 'throw (condition expression)) (M_state_throw expression state throw))
       ((eq? 'function (condition expression)) (M_declare_fxn expression state rtn break continue throw))
-      ((eq? 'main (condition expression)) ())
+      ((eq? 'fxncall (condition expression)) (M_state_fxncall expression state rtn break continue throw))
       (else (M_boolean(expression) state)))))
+
+(define fxn_body cadr)
+(define fxn_environment caddr)
+(define M_state_fxncall
+  (lambda (expression state rtn break continue throw)
+    (call/cc
+     (lambda (return)
+       (run-state (car (cdr (searchVariable (fxn_name expression) state (lambda (v) v)))) state return break continue throw)))))
 
 (define fxn_name cadr)
 (define fxn_parameter caddr)
@@ -304,7 +312,7 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state)
                         (cond
-                          ((null? expressions) (M_state '(main main) state return default_break default_continue default_throw))
+                          ((null? expressions) (M_state '(fxncall main) state return default_break default_continue default_throw))
                           (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn default_break default_continue default_throw)))))))
          (loop expressions state))))))
 
