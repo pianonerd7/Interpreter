@@ -270,9 +270,9 @@
 (define addToFrontOfState
   (lambda (var value state)
     (cond 
-      ((equal? state initialState) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
-      ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons value (vals state)) '())))
-      (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons value (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
+      ((equal? state initialState) (cons (cons var (variables state)) (cons (cons (box value) (vals state)) '())))
+      ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons (box value) (vals state)) '())))
+      (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons (box value) (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
 
 ;Cons an empty list to the state
 (define consEmptyListToState
@@ -284,10 +284,10 @@
   (lambda (var state return)
     (cond
       ((or (null? state)(null? (vals state))) (return 'empty))
-      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (firstVal (vals state))))
+      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (unbox (firstVal (vals state)))))
       ((not (list? (variables (topLayerState state)))) (return (searchVariable var (removeFirstPairFromState state) (lambda (v)(return v)))))
       ((null? (vals (topLayerState state))) (return (searchVariable var (restLayerState state) (lambda (v) (return v)))))
-      ((eq? (firstVar (variables (topLayerState state))) var) (return (firstVal (vals (topLayerState state)))))
+      ((eq? (firstVar (variables (topLayerState state))) var) (return (unbox (firstVal (vals (topLayerState state))))))
       (else (searchVariable var (removeFirstPairFromState state) (lambda (v) (return v)))))))
 
 ;Checks to see if a (possibly nested) list is empty or not
