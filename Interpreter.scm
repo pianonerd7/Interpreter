@@ -1,7 +1,6 @@
 (load "functionParser.scm")
-
 ;Anna He jxh604
-;Interpreter 2
+;Interpreter 3
 
 (define condition car)
 (define body cdr)
@@ -23,8 +22,21 @@
       ((eq? 'break (condition expression)) (M_state_Break break state))
       ((eq? 'try (condition expression)) (M_state_tryCatchFinally expression state rtn break continue throw))
       ((eq? 'throw (condition expression)) (M_state_throw expression state throw))
+      ((eq? 'function (condition expression)) (M_declare_Fxn expression state rtn break continue throw))
       (else (M_boolean(expression) state)))))
 
+(define fxn_name cadr)
+(define fxn_parameter caddr)
+(define fxn_body cadddr)
+; (function main(a1, a2) ((body stmt1) (body stmt2)))
+(define M_declare_fxn
+  (lambda (expression state rtn break continue throw)
+    (addToFrontOfState (fxn_name expression) (list (fxn_parameter expression) (fxn_body expression) (lambda (state) (createEnvironment (fxn_name expression) state))))))
+    
+(define createEnvironment
+  (lambda (fxnname state)
+    ()))
+      
 (define boolean_operator car)
 (define leftCondition cadr)
 (define rightCondition caddr)
@@ -261,14 +273,15 @@
 (define restOfExpression cdr)
 ;Sends each chunk of code to M_state for computation. If a return statement is reached, it call/cc to here so that nothing else is executed
 (define evaluate
-  (lambda (expressions state)
+  (lambda (expressions state return)
     (call/cc
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state)
                         (cond
                           ((null? expressions) (rtn state))
                           (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn default_break default_continue default_throw)))))))
-         (loop expressions state))))))
+         (loop expressions state))
+       (M_state '(main main) state return default_break default_continue default_throw)))))
 
 (define initialState '(()()))
 
@@ -287,4 +300,6 @@
 ;Parses a file and sends to the evaluate function
 (define interpret
   (lambda (filename)
-    (evaluate (parser filename) initialState)))
+    (call/cc
+     (lambda (return)
+       (evaluate (parser filename) initialState return)))))
