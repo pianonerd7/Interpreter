@@ -33,7 +33,9 @@
   (lambda (expression state rtn break continue throw)
     (call/cc
      (lambda (return)
-       (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state) return break continue throw)))))
+       (if (null? (fxn_argVal expression))
+           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state) return break continue throw)
+           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (list (M_boolean (fxn_argVal expression) state rtn break continue throw)) state) return break continue throw))))))
 
 ;bind parameters with value
 (define fxncall_newstate
