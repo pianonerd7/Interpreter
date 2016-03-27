@@ -22,7 +22,8 @@
       ((eq? 'break (condition expression)) (M_state_Break break state))
       ((eq? 'try (condition expression)) (M_state_tryCatchFinally expression state rtn break continue throw))
       ((eq? 'throw (condition expression)) (M_state_throw expression state throw))
-      ((eq? 'function (condition expression)) (M_declare_Fxn expression state rtn break continue throw))
+      ((eq? 'function (condition expression)) (M_declare_fxn expression state rtn break continue throw))
+      ((eq? 'main (condition expression)) ())
       (else (M_boolean(expression) state)))))
 
 (define fxn_name cadr)
@@ -31,11 +32,22 @@
 ; (function main(a1, a2) ((body stmt1) (body stmt2)))
 (define M_declare_fxn
   (lambda (expression state rtn break continue throw)
-    (addToFrontOfState (fxn_name expression) (list (fxn_parameter expression) (fxn_body expression) (lambda (state) (createEnvironment (fxn_name expression) state))))))
+    (addToFrontOfState (fxn_name expression) (list (fxn_parameter expression) (fxn_body expression) (lambda (state) (createEnvironment (fxn_name expression) state))) state)))
     
 (define createEnvironment
   (lambda (fxnname state)
-    ()))
+    (cond
+      ((eq? 'empty searchInStateTopLayer(fxnname state)) 'empty)
+      (else (createEnvironment fxnname (cdr state))))))
+
+(define topVariable caar)
+(define topValue caadr)
+(define searchInStateTopLayer
+  (lambda (fxnname state)
+    (cond
+      ((eq? 'empty (searchVariable(fxnname state (lambda (v) v)))) 'empty)
+      ((eq? fxnname (topVariable state)) (topValue state))
+      (else (searchInStateTopLayer fxnname (removeFirstPariFromState state))))))
       
 (define boolean_operator car)
 (define leftCondition cadr)
@@ -269,20 +281,6 @@
       ((pair? list) (isEmpty (car list)))
       (else 'no))))
 
-(define 1stExpression car)
-(define restOfExpression cdr)
-;Sends each chunk of code to M_state for computation. If a return statement is reached, it call/cc to here so that nothing else is executed
-(define evaluate
-  (lambda (expressions state return)
-    (call/cc
-     (lambda (rtn)
-       (letrec ((loop (lambda (expressions state)
-                        (cond
-                          ((null? expressions) (rtn state))
-                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn default_break default_continue default_throw)))))))
-         (loop expressions state))
-       (M_state '(main main) state return default_break default_continue default_throw)))))
-
 (define initialState '(()()))
 
 (define default_break
@@ -296,6 +294,19 @@
 (define default_throw
   (lambda (statment state)
     (error "throw without catch")))
+
+(define 1stExpression car)
+(define restOfExpression cdr)
+;Sends each chunk of code to M_state for computation. If a return statement is reached, it call/cc to here so that nothing else is executed
+(define evaluate
+  (lambda (expressions state return)
+    (call/cc
+     (lambda (rtn)
+       (letrec ((loop (lambda (expressions state)
+                        (cond
+                          ((null? expressions) (M_state '(main main) state return default_break default_continue default_throw))
+                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn default_break default_continue default_throw)))))))
+         (loop expressions state))))))
 
 ;Parses a file and sends to the evaluate function
 (define interpret
