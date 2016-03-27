@@ -28,11 +28,19 @@
 
 (define fxn_body cadr)
 (define fxn_environment caddr)
+(define fxn_argVal cddr)
 (define M_state_fxncall
   (lambda (expression state rtn break continue throw)
     (call/cc
      (lambda (return)
-       (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) state return break continue throw)))))
+       (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state) return break continue throw)))))
+
+;bind parameters with value
+(define fxncall_newstate
+  (lambda (var val state)
+    (cond
+      ((and (null? var) (null? val)) state)
+      (else (fxncall_newstate (cdr var) (cdr val) (addToFrontOfState (car var) (car val) state))))))
 
 (define fxn_name cadr)
 (define fxn_parameter caddr)
@@ -103,6 +111,7 @@
       ((eq? '* (operator expression)) (* (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
       ((eq? '/ (operator expression)) (quotient (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
       ((eq? '% (operator expression)) (remainder (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
+      ((eq? 'funcall (condition expression)) (M_state_fxncall expression state rtn break continue throw))
       (else (error 'unknown "unknown expression")))))
 
 ;helper function to add another layer to the state
