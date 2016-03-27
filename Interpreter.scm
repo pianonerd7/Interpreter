@@ -12,19 +12,19 @@
   (lambda (expression state rtn break continue throw)
     (cond
       ((null? expression) state)
-      ((eq? 'var (condition expression)) (M_declare (body expression) state))
-      ((eq? '= (condition expression)) (M_assignment (body expression) state))
-      ((eq? 'return (condition expression)) (M_return (body expression) state rtn))
+      ((eq? 'var (condition expression)) (M_declare (body expression) state rtn break continue throw))
+      ((eq? '= (condition expression)) (M_assignment (body expression) state rtn break continue throw))
+      ((eq? 'return (condition expression)) (M_return (body expression) state rtn break continue throw))
       ((eq? 'if (condition expression)) (M_state_If expression state rtn break continue throw))
-      ((eq? 'while (condition expression)) (M_state_While expression state rtn throw))
+      ((eq? 'while (condition expression)) (M_state_While expression state rtn break continue throw))
       ((eq? 'begin (condition expression)) (M_state_Begin (body expression) state rtn break continue throw))
       ((eq? 'continue (condition expression)) (M_state_Continue continue state))
       ((eq? 'break (condition expression)) (M_state_Break break state))
       ((eq? 'try (condition expression)) (M_state_tryCatchFinally expression state rtn break continue throw))
       ((eq? 'throw (condition expression)) (M_state_throw expression state throw))
       ((eq? 'function (condition expression)) (M_declare_fxn expression state rtn break continue throw))
-      ((eq? 'fxncall (condition expression)) (M_state_fxncall expression state rtn break continue throw))
-      (else (M_boolean(expression) state)))))
+      ((eq? 'funcall (condition expression)) (M_state_fxncall expression state rtn break continue throw))
+      (else (M_boolean(expression) state rtn break continue throw)))))
 
 (define fxn_body cadr)
 (define fxn_environment caddr)
@@ -62,25 +62,25 @@
 (define rightCondition caddr)
 ;Determines the boolean value of an expression
 (define M_boolean
-  (lambda (expression state)
+  (lambda (expression state rtn break continue throw)
     (cond
       ((null? expression) state)
       ((eq? 'true expression) true)
       ((eq? 'false expression) false)
       ((eq? '#f expression) false)
       ((eq? '#t expression) true)
-      ((atom? expression) (M_value expression state))
-      ((null? (cdr expression)) (M_boolean (car expression) state))
-      ((eq? '== (boolean_operator expression)) (eq? (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
-      ((eq? '!= (boolean_operator expression)) (not (eq? (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state))))
-      ((eq? '< (boolean_operator expression)) (< (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
-      ((eq? '> (boolean_operator expression)) (> (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
-      ((eq? '<= (boolean_operator expression)) (<= (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
-      ((eq? '>= (boolean_operator expression)) (>= (M_boolean (leftCondition expression) state) (M_boolean (rightCondition expression) state)))
-      ((eq? '&& (boolean_operator expression)) (and (eq? (M_boolean (leftCondition expression) state) true) (eq? (M_boolean (rightCondition expression) state) true)))
-      ((eq? '|| (boolean_operator expression)) (or (eq? (M_boolean (leftCondition expression) state) true) (eq? (M_boolean (rightCondition expression) state) true)))
-      ((eq? '! (boolean_operator expression)) (not (M_boolean (cdr expression) state)))
-      (else (M_value expression state)))))
+      ((atom? expression) (M_value expression state rtn break continue throw))
+      ((null? (cdr expression)) (M_boolean (car expression) state rtn break continue throw))
+      ((eq? '== (boolean_operator expression)) (eq? (M_boolean (leftCondition expression) state rtn break continue throw) (M_boolean (rightCondition expression) state rtn break continue throw)))
+      ((eq? '!= (boolean_operator expression)) (not (eq? (M_boolean (leftCondition expression) state rtn break continue throw) (M_boolean (rightCondition expression) state rtn break continue throw))))
+      ((eq? '< (boolean_operator expression)) (< (M_boolean (leftCondition expression) state rtn break continue throw) (M_boolean (rightCondition expression) state rtn break continue throw)))
+      ((eq? '> (boolean_operator expression)) (> (M_boolean (leftCondition expression) state rtn break continue throw) (M_boolean (rightCondition expression) state rtn break continue throw)))
+      ((eq? '<= (boolean_operator expression)) (<= (M_boolean (leftCondition expression) state rtn break continue throw) (M_boolean (rightCondition expression) state rtn break continue throw)))
+      ((eq? '>= (boolean_operator expression)) (>= (M_boolean (leftCondition expression) state rtn break continue throw) (M_boolean (rightCondition expression) state rtn break continue throw)))
+      ((eq? '&& (boolean_operator expression)) (and (eq? (M_boolean (leftCondition expression) state rtn break continue throw) true) (eq? (M_boolean (rightCondition expression) state) state rtn break continue throw)))
+      ((eq? '|| (boolean_operator expression)) (or (eq? (M_boolean (leftCondition expression) state rtn break continue throw) true) (eq? (M_boolean (rightCondition expression) state) state rtn break continue throw)))
+      ((eq? '! (boolean_operator expression)) (not (M_boolean (cdr expression) state rtn break continue throw)))
+      (else (M_value expression state rtn break continue throw)))))
 
 (define operator car)
 (define leftOperand cadr)
@@ -89,20 +89,20 @@
 (define (atom? x) (not (or (pair? x) (null? x))))
 ;Computes the value of an expression
 (define M_value
-  (lambda (expression state)
+  (lambda (expression state rtn break continue throw)
     (cond
       ((number? expression) expression)
       ((and (atom? expression)(eq? (searchVariable expression state (lambda (v) v)) 'empty)) (error 'unknown "using before declaring"))
       ((and (atom? expression)(eq? (searchVariable expression state (lambda (v) v)) 'null)) (error 'unknown "using before assigning"))
       ((atom? expression) (searchVariable expression state (lambda (v) v)))
-      ((eq? '+ (operator expression)) (+ (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
+      ((eq? '+ (operator expression)) (+ (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
       ((eq? '- (operator expression))
        (if (null? (cddr expression))
-           (- 0 (M_value (leftOperand expression) state))
-           (- (M_value (leftOperand expression) state) (M_value (rightOperand expression) state))))
-      ((eq? '* (operator expression)) (* (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
-      ((eq? '/ (operator expression)) (quotient (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
-      ((eq? '% (operator expression)) (remainder (M_value (leftOperand expression) state) (M_value (rightOperand expression) state)))
+           (- 0 (M_value (leftOperand expression) state rtn break continue throw))
+           (- (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw))))
+      ((eq? '* (operator expression)) (* (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
+      ((eq? '/ (operator expression)) (quotient (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
+      ((eq? '% (operator expression)) (remainder (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
       (else (error 'unknown "unknown expression")))))
 
 ;helper function to add another layer to the state
@@ -113,15 +113,15 @@
 (define variable car)
 ; don't need cps, it simply adds the variable and value to the top most layer of the state
 (define M_declare
-  (lambda (expression state)
+  (lambda (expression state rtn break continue throw)
     (if (null? (isListNull expression))
         (addToFrontOfState (variable expression) 'null state)
-        (assignValue-cps (variable expression) (M_value (value expression) state) (addToFrontOfState(variable expression) 'null state) (lambda (v) v)))))
+        (assignValue-cps (variable expression) (M_value (value expression) state rtn break continue throw) (addToFrontOfState(variable expression) 'null state) (lambda (v) v)))))
 
 ;Calls on assignValue (which uses cps) to give a declared variable a value
 (define M_assignment
-  (lambda (expression state)
-    (assignValue-cps (variable expression) (M_value (value expression) state) state (lambda (v) v))))
+  (lambda (expression state rtn break continue throw)
+    (assignValue-cps (variable expression) (M_value (value expression) state rtn break continue throw) state (lambda (v) v))))
 
 (define firstVar car)
 (define firstVal car)
@@ -143,13 +143,13 @@
 
 ;Return the value. It call/cc back to evaluate and no other expression will be evaluated after this
 (define M_return
-  (lambda (expression state rtn)
-    (rtn (M_boolean expression state))))
+  (lambda (expression state rtn break continue throw)
+    (rtn (M_boolean expression state rtn break continue throw))))
 
 ;Evaluates the condition of an if statement, if true, then it executes, exit otherwise
 (define M_state_If
   (lambda (expression state rtn break continue throw)
-    (if (M_boolean (ifBody expression) state)
+    (if (M_boolean (ifBody expression) state rtn break continue throw)
         (M_state (ifTrueExec expression) state rtn break continue throw)
         (if (null? (cdddr expression))
             state
@@ -157,17 +157,17 @@
 
 ;Sends the condition, body and necessary arguments to whileLoop for call/cc
 (define M_state_While
-  (lambda (expression state rtn throw)
-    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn throw)))
+  (lambda (expression state rtn break continue throw)
+    (whileLoop (ifBody expression) (ifTrueExec expression) state rtn break continue throw)))
 
 ;Loops until the condition becomes false, then exits, or break is called and exits, or continue is called
 ;and goes onto the next iteration
 (define whileLoop
-  (lambda (condition body state rtn throw)
+  (lambda (condition body state rtn break continue throw)
     (call/cc
      (lambda (break)
        (letrec ((loop (lambda (condition body state)
-                        (if (M_boolean condition state)
+                        (if (M_boolean condition state rtn break continue throw)
                             (loop condition body (M_state body state rtn break (lambda (v) v) throw))
                             state))))
          (loop condition body state))))))
@@ -312,7 +312,7 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state)
                         (cond
-                          ((null? expressions) (M_state '(fxncall main) state return default_break default_continue default_throw))
+                          ((null? expressions) (M_state '(funcall main) state return default_break default_continue default_throw))
                           (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn default_break default_continue default_throw)))))))
          (loop expressions state))))))
 
