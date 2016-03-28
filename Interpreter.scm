@@ -263,20 +263,30 @@
     (cond
       ((or (null? state) (null? (car state))) 'empty)
       ((eq? (car (variables state)) name) (car (vals state)))
-      (searchInStateTopLayer name (removeFirstPairFromState state)))))
-     
+      (else (searchInStateTopLayer name (removeFirstPairFromState state))))))
+
+(define ifValuesExists caar)
 ;returns the box
 (define searchInStateAllLayer
   (lambda (name state)
     (cond
       ((null? state) 'empty)
-      ((eq? 'empty (searchInStateTopLayer name state)) (searchInStateAllLayer name (removeFirstPairFromState state)))
-      ((searchInStateTopLayer name state)))))
+      ((and (not(list? (ifValuesExists state))) (eq? 'empty (searchInStateTopLayer name state))) 'empty)
+      ((not (list? (ifValuesExists state))) (searchInStateTopLayer name state))
+      ((eq? 'empty (searchInStateTopLayer name (topLayerState state))) (searchInStateAllLayer name (removeFirstLayerFromState state)))
+      (else (searchInStateTopLayer name (topLayerState state))))))
 
+(define removeFirstLayerFromState
+  (lambda (state)
+    (cond
+      ((eq? state initialState) state)
+      (else (restLayerState state)))))
+     
 ;Removes the first pair of var and value from the state
 (define removeFirstPairFromState
   (lambda (state)
     (cond
+      ((null? (variables (topLayerState state))) (cadr state))
       ((eq? state initialState) state)
       ((not (list? (variables (topLayerState state)))) (cons (cdr (variables state)) (cons (cdr (vals state)) '())))
       (else (cons (cons (cdr (variables (topLayerState state))) (cons (cdr (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
