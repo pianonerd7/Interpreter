@@ -1,4 +1,4 @@
-(load "functionParser.scm")
+(load "simpleParser.scm")
 ;Anna He jxh604
 ;Interpreter 3
 
@@ -78,8 +78,8 @@
       ((eq? '> (boolean_operator expression)) (> (M_boolean (leftCondition expression) state rtn break continue throw) (M_boolean (rightCondition expression) state rtn break continue throw)))
       ((eq? '<= (boolean_operator expression)) (<= (M_boolean (leftCondition expression) state rtn break continue throw) (M_boolean (rightCondition expression) state rtn break continue throw)))
       ((eq? '>= (boolean_operator expression)) (>= (M_boolean (leftCondition expression) state rtn break continue throw) (M_boolean (rightCondition expression) state rtn break continue throw)))
-      ((eq? '&& (boolean_operator expression)) (and (eq? (M_boolean (leftCondition expression) state rtn break continue throw) true) (eq? (M_boolean (rightCondition expression) state rtn break continue throw) state rtn break continue throw)))
-      ((eq? '|| (boolean_operator expression)) (or (eq? (M_boolean (leftCondition expression) state rtn break continue throw) true) (eq? (M_boolean (rightCondition expression) state rtn break continue throw) state rtn break continue throw)))
+      ((eq? '&& (boolean_operator expression)) (and (eq? (M_boolean (leftCondition expression) state rtn break continue throw) true) (eq? (M_boolean (rightCondition expression) state rtn break continue throw) true)))
+      ((eq? '|| (boolean_operator expression)) (or (eq? (M_boolean (leftCondition expression) state rtn break continue throw) true) (eq? (M_boolean (rightCondition expression) state rtn break continue throw) true)))
       ((eq? '! (boolean_operator expression)) (not (M_boolean (cdr expression) state rtn break continue throw)))
       (else (M_value expression state rtn break continue throw)))))
 
