@@ -266,7 +266,7 @@
       (if (null? pt)
           state
           (run-state (cdr pt)
-                     (M_state (car pt) state prog-return break continue throw)
+                     (begin (M_state (car pt) state prog-return break continue throw) state)
                      prog-return break continue throw))))
 
 ;Uses CPS to search for a variable in a list. Used in M_value
