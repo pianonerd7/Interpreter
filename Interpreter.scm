@@ -157,7 +157,9 @@
 ;we find it, or until the list is null
 (define assignValue-cps
   (lambda (var value state return)
-    (begin (set-box! (searchInStateAllLayer var state) value) state)))
+    (if (eq? (searchInStateAllLayer var state) 'empty)
+        (error "You are not in scope to access this variable!")
+        (begin (set-box! (searchInStateAllLayer var state) value) state))))
   
 ;Return the value. It call/cc back to evaluate and no other expression will be evaluated after this
 (define M_return
