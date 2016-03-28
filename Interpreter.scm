@@ -34,8 +34,14 @@
     (call/cc
      (lambda (return)
        (if (null? (fxn_argVal expression))
-           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state) return break continue throw)
-           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) state) return break continue throw))))))
+           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
+                      (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
+                            (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state))
+                                             return break continue throw)
+           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
+                      (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
+                      (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) state))
+                      return break continue throw))))))
 
 (define firstParameter car)
 (define restParameter cdr)
@@ -55,7 +61,10 @@
 
 (define checkParameterLength
   (lambda (var val)
-    ()))
+    (cond
+      ((and (null? var) (null? val)) 'pass)
+      ((or (null? var) (null? val)) (error "Formal parameter and actual parameter are not the same length!"))
+      (else (checkParameterLength (cdr var) (cdr val))))))
 
 (define fxn_name cadr)
 (define fxn_parameter caddr)
