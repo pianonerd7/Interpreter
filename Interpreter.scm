@@ -53,6 +53,10 @@
       ((and (null? var) (null? val)) state)
       (else (fxncall_newstate (cdr var) (cdr val) (addToFrontOfState (car var) (car val) state))))))
 
+(define checkParameterLength
+  (lambda (var val)
+    ()))
+
 (define fxn_name cadr)
 (define fxn_parameter caddr)
 (define fxn_body cadddr)
@@ -351,6 +355,13 @@
 ;Parses a file and sends to the evaluate function
 (define interpret
   (lambda (filename)
-    (call/cc
+    (checkResult (call/cc
      (lambda (return)
-       (evaluate (parser filename) initialState return)))))
+       (evaluate (parser filename) initialState return))))))
+
+(define checkResult
+  (lambda (result)
+    (cond
+      ((eq? result #t) 'true)
+      ((eq? result #f) 'false)
+      (else result))))
