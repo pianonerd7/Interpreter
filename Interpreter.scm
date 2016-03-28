@@ -36,11 +36,11 @@
        (if (null? (fxn_argVal expression))
            (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
                       (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
-                            (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state))
-                                             return break continue throw)
+                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state))
+                      return break continue throw)
            (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
                       (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
-                      (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) state))
+                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) state))
                       return break continue throw))))))
 
 (define firstParameter car)
@@ -73,13 +73,13 @@
 (define M_declare_fxn
   (lambda (expression state rtn break continue throw)
     (addToFrontOfState (fxn_name expression) (list (fxn_parameter expression) (fxn_body expression) (lambda (state) (createEnvironment (fxn_name expression) state))) state)))
-    
+
 (define createEnvironment
   (lambda (fxnname state)
     (cond
       ((eq? 'empty searchInStateTopLayer(fxnname state)) 'empty)
       (else (createEnvironment fxnname (cdr state))))))
-      
+
 (define boolean_operator car)
 (define leftCondition cadr)
 (define rightCondition caddr)
@@ -160,7 +160,7 @@
     (if (eq? (searchInStateAllLayer var state) 'empty)
         (error "You are not in scope to access this variable!")
         (begin (set-box! (searchInStateAllLayer var state) value) state))))
-  
+
 ;Return the value. It call/cc back to evaluate and no other expression will be evaluated after this
 (define M_return
   (lambda (expression state rtn break continue throw)
@@ -237,16 +237,16 @@
     (call/cc
      (lambda (try-break)
        (letrec ((finally (lambda (s)
-                    (cond
-                      ((null? (finally-stmt statement)) s)
-                      ((list? (car (finally-body statement))) (run-state (finally-body statement) s prog-return break continue throw))
-                      (else (m-state (finally-body statement) s prog-return break continue throw)))))
-
+                           (cond
+                             ((null? (finally-stmt statement)) s)
+                             ((list? (car (finally-body statement))) (run-state (finally-body statement) s prog-return break continue throw))
+                             (else (m-state (finally-body statement) s prog-return break continue throw)))))
+                
                 (try (lambda (s try-throw)
                        (if (list? (car (try-body statement)))
                            (finally (run-state (try-body statement) s prog-return break continue try-throw))
                            (finally (m-state (try-body statement) s prog-return break continue try-throw)))))
-
+                
                 (catch (lambda (e s)
                          (if (list? (car (catch-body statement)))
                              (finally (run-state (replace*-cps (catch-err statement) e (catch-body statement) (lambda (v) v)) s prog-return break continue throw))
@@ -262,12 +262,12 @@
       (else (replace*-cps old new (cdr l) (lambda (v) (return (cons (car l) v))))))))
 
 (define run-state
-    (lambda (pt state prog-return break continue throw)
-      (if (null? pt)
-          state
-          (run-state (cdr pt)
-                     (begin (M_state (car pt) state prog-return break continue throw) state)
-                     prog-return break continue throw))))
+  (lambda (pt state prog-return break continue throw)
+    (if (null? pt)
+        state
+        (run-state (cdr pt)
+                   (M_state (car pt) state prog-return break continue throw)
+                   prog-return break continue throw))))
 
 ;Uses CPS to search for a variable in a list. Used in M_value
 (define searchVariable
@@ -305,7 +305,7 @@
     (cond
       ((eq? state initialState) state)
       (else (restLayerState state)))))
-     
+
 ;Removes the first pair of var and value from the state
 (define removeFirstPairFromState
   (lambda (state)
@@ -367,8 +367,8 @@
 (define interpret
   (lambda (filename)
     (checkResult (call/cc
-     (lambda (return)
-       (evaluate (parser filename) initialState return))))))
+                  (lambda (return)
+                    (evaluate (parser filename) initialState return))))))
 
 (define checkResult
   (lambda (result)
