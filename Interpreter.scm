@@ -1,4 +1,4 @@
-(load "simpleParser.scm")
+(load "functionParser.scm")
 ;Anna He jxh604
 ;Interpreter 3
 
@@ -35,7 +35,16 @@
      (lambda (return)
        (if (null? (fxn_argVal expression))
            (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state) return break continue throw)
-           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (list (M_boolean (fxn_argVal expression) state rtn break continue throw)) state) return break continue throw))))))
+           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v))) (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) state) return break continue throw))))))
+
+(define firstParameter car)
+(define restParameter cdr)
+;(x y z) --> (1 2 3)
+(define formalToActualParam
+  (lambda (formalParam state rtn break continue throw)
+    (cond
+      ((null? formalParam) '())
+      (else (cons (M_boolean (firstParameter formalParam) state rtn break continue throw) (formalToActualParam (restParameter formalParam) state rtn break continue throw))))))
 
 ;bind parameters with value
 (define fxncall_newstate
