@@ -57,15 +57,6 @@
     (cond
       ((eq? 'empty searchInStateTopLayer(fxnname state)) 'empty)
       (else (createEnvironment fxnname (cdr state))))))
-
-(define topVariable caar)
-(define topValue caadr)
-(define searchInStateTopLayer
-  (lambda (fxnname state)
-    (cond
-      ((eq? 'empty (searchVariable(fxnname state (lambda (v) v)))) 'empty)
-      ((eq? fxnname (topVariable state)) (topValue state))
-      (else (searchInStateTopLayer fxnname (removeFirstPariFromState state))))))
       
 (define boolean_operator car)
 (define leftCondition cadr)
@@ -144,14 +135,8 @@
 ;we find it, or until the list is null
 (define assignValue-cps
   (lambda (var value state return)
-    (cond
-      ((null? state)(error 'unknown "using before declaring"))
-      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (addToFrontOfState var value (removeFirstPairFromState state))))
-      ((not (list? (variables (topLayerState state)))) (return (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (return (addToFrontOfState (car (variables state)) (car (vals state)) v))))))
-      ((null? (vals (topLayerState state))) (return (assignValue-cps var value (restLayerState state) (lambda (v) (cons (topLayerState state) (cons v '()))))))
-      ((eq? (firstVar (variables (topLayerState state))) var) (return (addToFrontOfState var value (removeFirstPairFromState state))))
-      (else (assignValue-cps var value (removeFirstPairFromState state) (lambda (v) (return (addToFrontOfState (car (variables (topLayerState state))) (car (vals (topLayerState state))) v))))))))
-
+    (begin (set-box! (searchInStateAllLayer var state) value) state)))
+  
 ;Return the value. It call/cc back to evaluate and no other expression will be evaluated after this
 (define M_return
   (lambda (expression state rtn break continue throw)
@@ -260,6 +245,34 @@
                      (M_state (car pt) state prog-return break continue throw)
                      prog-return break continue throw))))
 
+;Uses CPS to search for a variable in a list. Used in M_value
+(define searchVariable
+  (lambda (var state return)
+    (cond
+      ((or (null? state)(null? (vals state))) (return 'empty))
+      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (unbox (firstVal (vals state)))))
+      ((not (list? (variables (topLayerState state)))) (return (searchVariable var (removeFirstPairFromState state) (lambda (v)(return v)))))
+      ((null? (vals (topLayerState state))) (return (searchVariable var (restLayerState state) (lambda (v) (return v)))))
+      ((eq? (firstVar (variables (topLayerState state))) var) (return (unbox (firstVal (vals (topLayerState state))))))
+      (else (searchVariable var (removeFirstPairFromState state) (lambda (v) (return v)))))))
+
+(define topVariable caar)
+(define topValue caadr)
+(define searchInStateTopLayer
+  (lambda (name state)
+    (cond
+      ((or (null? state) (null? (car state))) 'empty)
+      ((eq? (car (variables state)) name) (car (vals state)))
+      (searchInStateTopLayer name (removeFirstPairFromState state)))))
+     
+;returns the box
+(define searchInStateAllLayer
+  (lambda (name state)
+    (cond
+      ((null? state) 'empty)
+      ((eq? 'empty (searchInStateTopLayer name state)) (searchInStateAllLayer name (removeFirstPairFromState state)))
+      ((searchInStateTopLayer name state)))))
+
 ;Removes the first pair of var and value from the state
 (define removeFirstPairFromState
   (lambda (state)
@@ -271,7 +284,7 @@
 ;Adds a value and a pair to the top most layer of the state
 (define addToFrontOfState
   (lambda (var value state)
-    (cond 
+    (cond
       ((equal? state initialState) (cons (cons var (variables state)) (cons (cons (box value) (vals state)) '())))
       ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons (box value) (vals state)) '())))
       (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons (box value) (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
@@ -280,17 +293,6 @@
 (define consEmptyListToState
   (lambda (state)
     (cons state '())))
-
-;Uses CPS to search for a variable in a list. Used in M_value
-(define searchVariable
-  (lambda (var state return)
-    (cond
-      ((or (null? state)(null? (vals state))) (return 'empty))
-      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (unbox (firstVal (vals state)))))
-      ((not (list? (variables (topLayerState state)))) (return (searchVariable var (removeFirstPairFromState state) (lambda (v)(return v)))))
-      ((null? (vals (topLayerState state))) (return (searchVariable var (restLayerState state) (lambda (v) (return v)))))
-      ((eq? (firstVar (variables (topLayerState state))) var) (return (unbox (firstVal (vals (topLayerState state))))))
-      (else (searchVariable var (removeFirstPairFromState state) (lambda (v) (return v)))))))
 
 ;Checks to see if a (possibly nested) list is empty or not
 (define isEmpty
