@@ -1,5 +1,7 @@
 (load "functionParser.scm")
 ;Anna He jxh604
+;Leah Platt lrp39		
+;Haley Eisenshtadt hne3
 ;Interpreter 3
 
 (define condition car)
@@ -29,17 +31,23 @@
 (define fxn_body cadr)
 (define fxn_environment caddr)
 (define fxn_argVal cddr)
+;when a function is called M_state_fxncall gets the closure for the function, and binds the formal parameter and the
+;arguments, create a new layer and append to the front of the state with the parameters in it. Then it calls run-state
+;to process the body of the function
 (define M_state_fxncall
   (lambda (expression state rtn break continue throw)
     (call/cc
      (lambda (return)
            (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
                       (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
-                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) (addLayer initialState (consEmptyListToState ((caddr (searchVariable (fxn_name expression) state (lambda (v) v))) state)))))
+                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v)))
+                                             (formalToActualParam (fxn_argVal expression) state rtn break continue throw)
+                                             (addLayer initialState (consEmptyListToState ((caddr (searchVariable (fxn_name expression) state (lambda (v) v))) state)))))
                       return break continue throw)))))
 
 (define firstParameter car)
 (define restParameter cdr)
+;binds the actual parameters to the formal parameters
 ;(x y z) --> (1 2 3)
 (define formalToActualParam
   (lambda (formalParam state rtn break continue throw)
@@ -47,13 +55,14 @@
       ((null? formalParam) '())
       (else (cons (M_boolean (firstParameter formalParam) state rtn break continue throw) (formalToActualParam (restParameter formalParam) state rtn break continue throw))))))
 
-;bind parameters with value
+;bind parameters with value to the front of the state
 (define fxncall_newstate
   (lambda (var val state)
     (cond
       ((and (null? var) (null? val)) state)
       (else (fxncall_newstate (cdr var) (cdr val) (addToFrontOfState (car var) (car val) state))))))
 
+;checks to make sure that the formal parameter and the actual parameter passed in from the expression is the same length
 (define checkParameterLength
   (lambda (var val)
     (cond
@@ -65,10 +74,13 @@
 (define fxn_parameter caddr)
 (define fxn_body cadddr)
 ; (function main(a1, a2) ((body stmt1) (body stmt2)))
+;declares a function by creating a closure and placing into the state
 (define M_declare_fxn
   (lambda (expression state rtn break continue throw)
     (addToFrontOfState (fxn_name expression) (list (fxn_parameter expression) (fxn_body expression) (lambda (state) (createEnvironment (fxn_name expression) state))) state)))
 
+;this is a function that will be placed in the closure for each function that will get called when the
+;function gets called. This function creates the environment for the function
 (define createEnvironment
   (lambda (fxnname state)
     (cond
@@ -217,36 +229,37 @@
     (break (removeTopLayer state))))
 
 ; (try body (catch (e) body) (finally body))
-(define try-body cadr)
-(define catch-body (lambda (t) (if (null? (cddr (caddr t)))  '()  (car (cddr (caddr t))))))
-(define catch-err (lambda (t) (car (cadr (caddr t)))))
-(define finally-stmt (lambda (t) (car (cdddr t))))
-(define finally-body (lambda (t) (cadr (car (cdddr t)))))
+(define try_body cadr)
+(define catch_body (lambda (t) (if (null? (cddr (caddr t)))  '()  (car (cddr (caddr t))))))
+(define catch_err (lambda (t) (car (cadr (caddr t)))))
+(define finally_stmt (lambda (t) (car (cdddr t))))
+(define finally_body (lambda (t) (cadr (car (cdddr t)))))
 
+; gets called when an expression throws
 (define M_state_throw
   (lambda (statement state throw)
     (throw (except-stmt statement) state)))
 (define except-stmt cadr)
 
 (define M_state_tryCatchFinally
-  (lambda (statement state prog-return break continue throw)
+  (lambda (statement state return break continue throw)
     (call/cc
      (lambda (try-break)
        (letrec ((finally (lambda (s)
                            (cond
-                             ((null? (finally-stmt statement)) s)
-                             ((list? (car (finally-body statement))) (run-state (finally-body statement) s prog-return break continue throw))
-                             (else (m-state (finally-body statement) s prog-return break continue throw)))))
+                             ((null? (finally_stmt statement)) s)
+                             ((list? (car (finally_body statement))) (run-state (finally_body statement) s return break continue throw))
+                             (else (m-state (finally_body statement) s return break continue throw)))))
                 
                 (try (lambda (s try-throw)
-                       (if (list? (car (try-body statement)))
-                           (finally (run-state (try-body statement) s prog-return break continue try-throw))
-                           (finally (m-state (try-body statement) s prog-return break continue try-throw)))))
+                       (if (list? (car (try_body statement)))
+                           (finally (run-state (try_body statement) s return break continue try-throw))
+                           (finally (m-state (try_body statement) s return break continue try-throw)))))
                 
                 (catch (lambda (e s)
-                         (if (list? (car (catch-body statement)))
-                             (finally (run-state (replace*-cps (catch-err statement) e (catch-body statement) (lambda (v) v)) s prog-return break continue throw))
-                             (finally (m-state (replace*-cps (catch-err statement) e (catch-body statement) (lambda (v) v)) s prog-return break continue throw))))))
+                         (if (list? (car (catch_body statement)))
+                             (finally (run-state (replace*-cps (catch_err statement) e (catch_body statement) (lambda (v) v)) s return break continue throw))
+                             (finally (m-state (replace*-cps (catch_err statement) e (catch_body statement) (lambda (v) v)) s return break continue throw))))))
          (try state (lambda (e s) (try-break (catch e s)))) )))))
 
 (define replace*-cps
@@ -257,15 +270,16 @@
       ((eq? (car l) old) (replace*-cps old new (cdr l) (lambda (v) (return (cons new v)))))
       (else (replace*-cps old new (cdr l) (lambda (v) (return (cons (car l) v))))))))
 
+;passes into this function a body and it will execute each expression 
 (define run-state
-  (lambda (pt state prog-return break continue throw)
-    (if (null? pt)
+  (lambda (expression state return break continue throw)
+    (if (null? expression)
         state
-        (run-state (cdr pt)
-                   (M_state (car pt) state prog-return break continue throw)
-                   prog-return break continue throw))))
+        (run-state (cdr expression)
+                   (M_state (car expression) state return break continue throw)
+                   return break continue throw))))
 
-;Uses CPS to search for a variable in a list. Used in M_value
+;Uses CPS to search for a variable in the state
 (define searchVariable
   (lambda (var state return)
     (cond
@@ -278,6 +292,7 @@
 
 (define topVariable caar)
 (define topValue caadr)
+;searches only in the top layer of the state, returns empty if the name doesn't exist
 (define searchInStateTopLayer
   (lambda (name state)
     (cond
@@ -286,7 +301,7 @@
       (else (searchInStateTopLayer name (removeFirstPairFromState state))))))
 
 (define ifValuesExists caar)
-;returns the box
+;returns the box of a name found in the state if it exists, empty other wise
 (define searchInStateAllLayer
   (lambda (name state)
     (cond
@@ -296,18 +311,21 @@
       ((eq? 'empty (searchInStateTopLayer name (topLayerState state))) (searchInStateAllLayer name (removeFirstLayerFromState state)))
       (else (searchInStateTopLayer name (topLayerState state))))))
 
+;returns the state with the first layer removed
 (define removeFirstLayerFromState
   (lambda (state)
     (cond
-      ((eq? state initialState) state)
+      ((equal? state initialState) state)
       (else (restLayerState state)))))
 
+;returns the first layer of the state
 (define getFirstLayerFromState
   (lambda (state)
     (cond
-      ((eq? state initialState) state)
+      ((equal? state initialState) state)
       ((list? (ifValuesExists state)) (car state))
       (else state))))
+
 ;Removes the first pair of var and value from the state
 (define removeFirstPairFromState
   (lambda (state)
@@ -340,14 +358,17 @@
 
 (define initialState '(()()))
 
+;default break
 (define default_break
   (lambda (v)
     (error "break not in loop")))
 
+;default continue
 (define default_continue
   (lambda (v)
     (error "continue not in loop")))
 
+;default throw
 (define default_throw
   (lambda (statment state)
     (error "throw without catch")))
@@ -372,6 +393,7 @@
                   (lambda (return)
                     (evaluate (parser filename) initialState return))))))
 
+;converts the result to its corresponding boolean value if it exists
 (define checkResult
   (lambda (result)
     (cond
