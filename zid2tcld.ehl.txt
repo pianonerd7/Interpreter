@@ -1,0 +1,16 @@
+﻿i don't even know what
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+# On branch master
+# Your branch and 'origin/master' have diverged,
+# and have 1 and 1 different commit each, respectively.
+#   (use "git pull" to merge the remote branch into yours)
+#
+# Changes to be committed:
+#	new file:   functionParser.scm
+#
+# Untracked files:
+#	b3f433fo.frp.txt
+#	oogdzwar.5dp.txt
+#
+
