@@ -1,7 +1,5 @@
 (load "functionParser.scm")
-;Anna He jxh604		
-;Leah Platt lrp39		
-;Haley Eisenshtadt hne3
+;Anna He jxh604
 ;Interpreter 3
 
 (define condition car)
@@ -9,7 +7,6 @@
 (define ifBody cadr)
 (define ifTrueExec caddr)
 (define elseExec cadddr)
-(define nullState '(()()))
 ;M_state determines where to send expressions for execution
 (define M_state
   (lambda (expression state rtn break continue throw)
@@ -27,18 +24,7 @@
       ((eq? 'throw (condition expression)) (M_state_throw expression state throw))
       ((eq? 'function (condition expression)) (M_declare_fxn expression state rtn break continue throw))
       ((eq? 'funcall (condition expression)) (begin (M_value expression state rtn break continue throw) state))
-      (else (M_boolean expression state rtn break continue throw)))))
-;seperate mstate with var, fxns
-
-(define M_state_varfxn
-  (lambda (expression state rtn break continue throw)
-    (cond
-      ((null? expression) state)
-      ;((and (eq? '= (condition expression)) (eq? 'funcall (condition (body expression)))) (M_assignment (M_state_varfxn body state rtn break continue throw) state rtn break continue throw))
-      ;((eq? 'var (condition expression)) (M_state expression (createEnvironment expression state rtn break continue throw) rtn break continue throw))
-      ((eq? 'function (condition expression)) (M_declare_fxn expression state rtn break continue throw))
-      (else (M_state expression state rtn break continue throw)))))
-      
+      (else (M_boolean(expression) state rtn break continue throw)))))
 
 (define fxn_body cadr)
 (define fxn_environment caddr)
@@ -47,24 +33,11 @@
   (lambda (expression state rtn break continue throw)
     (call/cc
      (lambda (return)
-       (if (null? (fxn_argVal expression))
            (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
                       (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
-                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state))
-                      return break continue throw)
-           ;don't really need this ^
-           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
-                      (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
-                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) state))
-                      return break continue throw))))))
-;return break continue throw is incorrect. need return throw. create new breaks and continues
-;1. Find fxn closure in state (probably w/searchVariable)
-;2. Run createEnv on current state to create fxn's env
-;3. Go through list of formal/actual params, for each actual, evaluate in current state, then bind into new layer on fxn environment
-;4. Create a new layer on top of it. Place into new layer formal params, bind formal params value of actual params, and place on top layer of fxn state
-;5. Call fxn body with new state
+                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) (addLayer initialState (consEmptyListToState ((caddr (searchVariable (fxn_name expression) state (lambda (v) v))) state)))))
+                      return break continue throw)))))
 
-; Boxes help us deal with global variables so that we do not have to return a pair whenever we modify them within a function
 (define firstParameter car)
 (define restParameter cdr)
 ;(x y z) --> (1 2 3)
@@ -72,7 +45,6 @@
   (lambda (formalParam state rtn break continue throw)
     (cond
       ((null? formalParam) '())
-      ((atom? formalParam) (formalToActualParam (list formalParam) state rtn break continue throw))
       (else (cons (M_boolean (firstParameter formalParam) state rtn break continue throw) (formalToActualParam (restParameter formalParam) state rtn break continue throw))))))
 
 ;bind parameters with value
@@ -96,21 +68,13 @@
 (define M_declare_fxn
   (lambda (expression state rtn break continue throw)
     (addToFrontOfState (fxn_name expression) (list (fxn_parameter expression) (fxn_body expression) (lambda (state) (createEnvironment (fxn_name expression) state))) state)))
-;createEnv: Given any state, how do I determine what part is in scope for this fxn?
+
 (define createEnvironment
-  (lambda (fxnname state rtn break continue throw)
+  (lambda (fxnname state)
     (cond
-      ;((eq? 'empty (searchInStateTopLayer fxnname state)) 'empty)
-      ((or (null? state) (null? (car state)) (box? fxnname)) nullState)
-      (else (cons (car state)
-                  (cons (formalToActualParam (firstParameter (firstParameter state)) state rtn break continue throw)
-                  (createEnvironment fxnname (cons (restParameter (firstParameter state))
-                                                   (list (restParameter (firstParameter (restParameter state))))) rtn break continue throw)))))))
-;1. Find fxn closure in state (probably w/searchVariable)
-;2. Run createEnv on current state to create fxn's env
-;3. Go through list of formal/actual params, for each actual, evaluate in current state, then bind into new layer on fxn environment
-;4. Create a new layer on top of it. Place into new layer formal params, bind formal params value of actual params, and place on top layer of fxn state
-;5. Call fxn body with new state
+      ((null? state) 'empty)
+      ((eq? 'empty (searchInStateTopLayer fxnname (getFirstLayerFromState state))) (createEnvironment fxnname (removeFirstLayerFromState state)))
+      (else state))))
 
 (define boolean_operator car)
 (define leftCondition cadr)
@@ -147,11 +111,9 @@
   (lambda (expression state rtn break continue throw)
     (cond
       ((number? expression) expression)
-      ((box? expression) (unbox expression))
       ((and (atom? expression)(eq? (searchVariable expression state (lambda (v) v)) 'empty)) (error 'unknown "using before declaring"))
       ((and (atom? expression)(eq? (searchVariable expression state (lambda (v) v)) 'null)) (error 'unknown "using before assigning"))
       ((atom? expression) (searchVariable expression state (lambda (v) v)))
-      ((eq? 'funcall (condition expression)) (M_state_fxncall expression state rtn break continue throw))
       ((eq? '+ (operator expression)) (+ (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
       ((eq? '- (operator expression))
        (if (null? (cddr expression))
@@ -300,7 +262,7 @@
     (if (null? pt)
         state
         (run-state (cdr pt)
-                   (M_state_varfxn (car pt) state prog-return break continue throw)
+                   (M_state (car pt) state prog-return break continue throw)
                    prog-return break continue throw))))
 
 ;Uses CPS to search for a variable in a list. Used in M_value
@@ -308,9 +270,7 @@
   (lambda (var state return)
     (cond
       ((or (null? state)(null? (vals state))) (return 'empty))
-      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)(not (list? (vals state)))) (return (unbox (vals state))))
-      ((and (box? (firstVal (vals state))) (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (unbox (firstVal (vals state)))))
-      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (firstVal (vals state))))
+      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (unbox (firstVal (vals state)))))
       ((not (list? (variables (topLayerState state)))) (return (searchVariable var (removeFirstPairFromState state) (lambda (v)(return v)))))
       ((null? (vals (topLayerState state))) (return (searchVariable var (restLayerState state) (lambda (v) (return v)))))
       ((eq? (firstVar (variables (topLayerState state))) var) (return (unbox (firstVal (vals (topLayerState state))))))
@@ -321,7 +281,7 @@
 (define searchInStateTopLayer
   (lambda (name state)
     (cond
-      ((or (null? state) (null? (car state))) 'empty)
+      ((or (null? state) (equal? initialState state)) 'empty)
       ((eq? (car (variables state)) name) (car (vals state)))
       (else (searchInStateTopLayer name (removeFirstPairFromState state))))))
 
@@ -342,6 +302,12 @@
       ((eq? state initialState) state)
       (else (restLayerState state)))))
 
+(define getFirstLayerFromState
+  (lambda (state)
+    (cond
+      ((eq? state initialState) state)
+      ((list? (ifValuesExists state)) (car state))
+      (else state))))
 ;Removes the first pair of var and value from the state
 (define removeFirstPairFromState
   (lambda (state)
@@ -396,7 +362,7 @@
        (letrec ((loop (lambda (expressions state)
                         (cond
                           ((null? expressions) (M_value '(funcall main) state return default_break default_continue default_throw))
-                          (else (loop (restOfExpression expressions) (M_state_varfxn (1stExpression expressions) state rtn default_break default_continue default_throw)))))))
+                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn default_break default_continue default_throw)))))))
          (loop expressions state))))))
 
 ;Parses a file and sends to the evaluate function
