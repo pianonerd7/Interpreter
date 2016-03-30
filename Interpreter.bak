@@ -1,7 +1,5 @@
 (load "functionParser.scm")
 ;Anna He jxh604
-;Leah Platt lrp39
-;Haley Eisenshtadt hne3
 ;Interpreter 3
 
 (define condition car)
@@ -36,10 +34,23 @@
   (lambda (expression state rtn break continue throw)
     (call/cc
      (lambda (return)
+<<<<<<< HEAD
        (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
                       (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
                            (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) state))
                       return break continue throw)))))
+=======
+       (if (null? (fxn_argVal expression))
+           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
+                      (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
+                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state))
+                      return break continue throw)
+           ;don't really need this ^
+           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
+                      (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
+                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) state))
+                      return break continue throw))))))
+>>>>>>> 1b84d50d2f3b74b1033932063620832eaab70810
 ;return break continue throw is incorrect. need return throw. create new breaks and continues
 ;1. Find fxn closure in state (probably w/searchVariable)
 ;2. Run createEnv on current state to create fxn's env
