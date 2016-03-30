@@ -25,6 +25,7 @@
       ((eq? 'function (condition expression)) (M_declare_fxn expression state rtn break continue throw))
       ((eq? 'funcall (condition expression)) (M_state_fxncall expression state rtn break continue throw))
       (else (M_boolean(expression) state rtn break continue throw)))))
+;seperate mstate with var, fxns
 
 (define fxn_body cadr)
 (define fxn_environment caddr)
@@ -33,16 +34,18 @@
   (lambda (expression state rtn break continue throw)
     (call/cc
      (lambda (return)
-       (if (null? (fxn_argVal expression))
-           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
-                      (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
-                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression) state))
-                      return break continue throw)
-           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
+       (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
                       (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
                            (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v))) (formalToActualParam (fxn_argVal expression) state rtn break continue throw) state))
-                      return break continue throw))))))
+                      return break continue throw)))))
+;return break continue throw is incorrect. need return throw. create new breaks and continues
+;1. Find fxn closure in state (probably w/searchVariable)
+;2. Run createEnv on current state to create fxn's env
+;3. Go through list of formal/actual params, for each actual, evaluate in current state, then bind into new layer on fxn environment
+;4. Create a new layer on top of it. Place into new layer formal params, bind formal params value of actual params, and place on top layer of fxn state
+;5. Call fxn body with new state
 
+; Boxes help us deal with global variables so that we do not have to return a pair whenever we modify them within a function
 (define firstParameter car)
 (define restParameter cdr)
 ;(x y z) --> (1 2 3)
@@ -73,13 +76,13 @@
 (define M_declare_fxn
   (lambda (expression state rtn break continue throw)
     (addToFrontOfState (fxn_name expression) (list (fxn_parameter expression) (fxn_body expression) (lambda (state) (createEnvironment (fxn_name expression) state))) state)))
-
+;createEnv: Given any state, how do I determine what part is in scope for this fxn?
 (define createEnvironment
   (lambda (fxnname state)
     (cond
       ((eq? 'empty searchInStateTopLayer(fxnname state)) 'empty)
+      ((eq? fxnname searchInStateTopLayer(fxnname state)) (topLayerState state))
       (else (createEnvironment fxnname (cdr state))))))
-
 (define boolean_operator car)
 (define leftCondition cadr)
 (define rightCondition caddr)
