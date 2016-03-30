@@ -7,6 +7,7 @@
 (define ifBody cadr)
 (define ifTrueExec caddr)
 (define elseExec cadddr)
+(define nullState '(()()))
 ;M_state determines where to send expressions for execution
 (define M_state
   (lambda (expression state rtn break continue throw)
@@ -24,8 +25,18 @@
       ((eq? 'throw (condition expression)) (M_state_throw expression state throw))
       ((eq? 'function (condition expression)) (M_declare_fxn expression state rtn break continue throw))
       ((eq? 'funcall (condition expression)) (M_state_fxncall expression state rtn break continue throw))
-      (else (M_boolean(expression) state rtn break continue throw)))))
+      (else (M_boolean expression state rtn break continue throw)))))
 ;seperate mstate with var, fxns
+
+(define M_state_varfxn
+  (lambda (expression state rtn break continue throw)
+    (cond
+      ((null? expression) (rtn state))
+      ;((and (eq? '= (condition expression)) (eq? 'funcall (condition (body expression)))) (M_assignment (M_state_varfxn body state rtn break continue throw) state rtn break continue throw))
+      ;((eq? 'var (condition expression)) (M_state expression (createEnvironment expression state rtn break continue throw) rtn break continue throw))
+      ((eq? 'function (condition expression)) (rtn (M_state expression (createEnvironment expression state rtn break continue throw) rtn break continue throw)))
+      (else (rtn (M_state expression state rtn break continue throw))))))
+      
 
 (define fxn_body cadr)
 (define fxn_environment caddr)
@@ -59,6 +70,7 @@
   (lambda (formalParam state rtn break continue throw)
     (cond
       ((null? formalParam) '())
+      ((atom? formalParam) (formalToActualParam (list formalParam) state rtn break continue throw))
       (else (cons (M_boolean (firstParameter formalParam) state rtn break continue throw) (formalToActualParam (restParameter formalParam) state rtn break continue throw))))))
 
 ;bind parameters with value
@@ -84,11 +96,20 @@
     (addToFrontOfState (fxn_name expression) (list (fxn_parameter expression) (fxn_body expression) (lambda (state) (createEnvironment (fxn_name expression) state))) state)))
 ;createEnv: Given any state, how do I determine what part is in scope for this fxn?
 (define createEnvironment
-  (lambda (fxnname state)
+  (lambda (fxnname state rtn break continue throw)
     (cond
-      ((eq? 'empty searchInStateTopLayer(fxnname state)) 'empty)
-      ((eq? fxnname searchInStateTopLayer(fxnname state)) (topLayerState state))
-      (else (createEnvironment fxnname (cdr state))))))
+      ;((eq? 'empty (searchInStateTopLayer fxnname state)) 'empty)
+      ((or (null? state) (null? (car state)) (box? fxnname)) nullState)
+      (else (rtn (cons (car state)
+                  (cons (formalToActualParam (firstParameter (firstParameter state)) state rtn break continue throw)
+                  (createEnvironment fxnname (cons (restParameter (firstParameter state))
+                                                   (list (restParameter (firstParameter (restParameter state))))) rtn break continue throw))))))))
+;1. Find fxn closure in state (probably w/searchVariable)
+;2. Run createEnv on current state to create fxn's env
+;3. Go through list of formal/actual params, for each actual, evaluate in current state, then bind into new layer on fxn environment
+;4. Create a new layer on top of it. Place into new layer formal params, bind formal params value of actual params, and place on top layer of fxn state
+;5. Call fxn body with new state
+
 (define boolean_operator car)
 (define leftCondition cadr)
 (define rightCondition caddr)
@@ -124,6 +145,7 @@
   (lambda (expression state rtn break continue throw)
     (cond
       ((number? expression) expression)
+      ((box? expression) (unbox expression))
       ((and (atom? expression)(eq? (searchVariable expression state (lambda (v) v)) 'empty)) (error 'unknown "using before declaring"))
       ((and (atom? expression)(eq? (searchVariable expression state (lambda (v) v)) 'null)) (error 'unknown "using before assigning"))
       ((atom? expression) (searchVariable expression state (lambda (v) v)))
@@ -275,7 +297,7 @@
     (if (null? pt)
         state
         (run-state (cdr pt)
-                   (M_state (car pt) state prog-return break continue throw)
+                   (M_state_varfxn (car pt) state prog-return break continue throw)
                    prog-return break continue throw))))
 
 ;Uses CPS to search for a variable in a list. Used in M_value
@@ -283,7 +305,9 @@
   (lambda (var state return)
     (cond
       ((or (null? state)(null? (vals state))) (return 'empty))
-      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (unbox (firstVal (vals state)))))
+      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)(not (list? (vals state)))) (return (unbox (vals state))))
+      ((and (box? (firstVal (vals state))) (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (unbox (firstVal (vals state)))))
+      ((and (not (list? (variables (topLayerState state))))(eq? (firstVar (variables state)) var)) (return (firstVal (vals state))))
       ((not (list? (variables (topLayerState state)))) (return (searchVariable var (removeFirstPairFromState state) (lambda (v)(return v)))))
       ((null? (vals (topLayerState state))) (return (searchVariable var (restLayerState state) (lambda (v) (return v)))))
       ((eq? (firstVar (variables (topLayerState state))) var) (return (unbox (firstVal (vals (topLayerState state))))))
@@ -368,8 +392,8 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state)
                         (cond
-                          ((null? expressions) (M_state '(funcall main) state return default_break default_continue default_throw))
-                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn default_break default_continue default_throw)))))))
+                          ((null? expressions) (M_state_varfxn '(funcall main) state return default_break default_continue default_throw))
+                          (else (loop (restOfExpression expressions) (M_state_varfxn (1stExpression expressions) state rtn default_break default_continue default_throw)))))))
          (loop expressions state))))))
 
 ;Parses a file and sends to the evaluate function
