@@ -1,5 +1,7 @@
 (load "functionParser.scm")
-;Anna He jxh604
+;Anna He jxh604		
+;Leah Platt lrp39		
+;Haley Eisenshtadt hne3
 ;Interpreter 3
 
 (define condition car)
@@ -24,11 +26,7 @@
       ((eq? 'try (condition expression)) (M_state_tryCatchFinally expression state rtn break continue throw))
       ((eq? 'throw (condition expression)) (M_state_throw expression state throw))
       ((eq? 'function (condition expression)) (M_declare_fxn expression state rtn break continue throw))
-<<<<<<< HEAD
       ((eq? 'funcall (condition expression)) (begin (M_value expression state rtn break continue throw) state))
-=======
-      ((eq? 'funcall (condition expression)) (M_state_fxncall expression state rtn break continue throw))
->>>>>>> 690fcee477934d552ad2515c84cc5e55e1ec8aa7
       (else (M_boolean expression state rtn break continue throw)))))
 ;seperate mstate with var, fxns
 
@@ -397,11 +395,7 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state)
                         (cond
-<<<<<<< HEAD
                           ((null? expressions) (M_value '(funcall main) state return default_break default_continue default_throw))
-=======
-                          ((null? expressions) (M_state_varfxn '(funcall main) state return default_break default_continue default_throw))
->>>>>>> 690fcee477934d552ad2515c84cc5e55e1ec8aa7
                           (else (loop (restOfExpression expressions) (M_state_varfxn (1stExpression expressions) state rtn default_break default_continue default_throw)))))))
          (loop expressions state))))))
 
