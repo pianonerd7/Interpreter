@@ -1,4 +1,4 @@
-(load "functionParser.scm")
+(load "classParser.scm")
 ;Anna He jxh604
 ;Leah Platt lrp39		
 ;Haley Eisenshtadt hne3
