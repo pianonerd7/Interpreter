@@ -34,6 +34,65 @@
 ;when a function is called M_state_fxncall gets the closure for the function, and binds the formal parameter and the
 ;arguments, create a new layer and append to the front of the state with the parameters in it. Then it calls run-state
 ;to process the body of the function
+(define newClass
+  (lambda (name body state)
+    (cond
+      ((null? body) state)
+      (else (addClassToFrontOfState (cons (list name) (list body)) state)))))
+
+(define getTopLayerClassName caar)
+(define getTopLayerClassBody cadar)
+(define getParentClass cddar)
+; Must pass in the BODY of the class to these functions
+; Use getTopLayerClassBody
+(define getInstanceFieldsAndValues
+  (lambda (body)
+    (getInstanceFieldsAndValues-acc '() (cadr body))))
+
+(define getInstanceFieldsAndValues-acc
+  (lambda (curr body)
+    (cond
+      ((or (null? body) (not (eq? (caar body) 'var))) curr)
+      (else (getInstanceFieldsAndValues-acc (cons (car body) curr) (cdr body))))))
+
+(define getInstanceFields
+  (lambda (body)
+    (getInstanceFields-acc '() (getInstanceFieldsAndValues body))))
+
+(define getInstanceFields-acc
+ (lambda (curr body)
+   (cond
+     ((null? body) curr)
+     (else (getInstanceFields-acc (cons (cadar body) curr) (cdr body))))))
+
+; Be careful on the differences between these and the above methods
+; These are ONLY for instances
+(define getTrueType car)
+(define getInstanceFieldValues cdr)
+
+
+(define getInstanceValues
+  (lambda (body)
+    (getInstanceValues-acc '() (getInstanceFieldsAndValues body))))
+
+(define getInstanceValues-acc
+ (lambda (curr body)
+   (cond
+     ((null? body) curr)
+     (else (getInstanceValues-acc (cons (caddar body) curr) (cdr body))))))
+
+
+(define getMethods
+  (lambda (body)
+    (getMethods-acc '() (cadr body))))
+; If this breaks in the future, try adding specific checks for static-function and function
+; This assumes that methods are the last thing you declare in your program
+(define getMethods-acc
+  (lambda (curr body)
+    (cond
+      ((null? body) curr)
+      ((eq? (caar body) 'var) (getMethods-acc curr (cdr body)))
+      (else (getMethods-acc (cons (car body) curr) (cdr body))))))
 (define M_state_fxncall
   (lambda (expression state rtn break continue throw)
     (call/cc
@@ -343,6 +402,7 @@
       ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons (box value) (vals state)) '())))
       (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons (box value) (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
 
+(define addClassToFrontOfState cons)
 ;Cons an empty list to the state
 (define consEmptyListToState
   (lambda (state)
@@ -357,6 +417,7 @@
       (else 'no))))
 
 (define initialState '(()()))
+(define classInitialState '(()))
 
 ;default break
 (define default_break
