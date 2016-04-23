@@ -402,27 +402,45 @@
 
 (define setreturn
   (lambda (classState newReturn)
-    (newReturn
+    (list newReturn
      (getbreak classState) (getcontinue classState) (getthrow classState)
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 (define setbreak
-  (lambda (classState newReturn)
-    (newReturn
-     (getbreak classState) (getcontinue classState) (getthrow classState)
+  (lambda (classState newBreak)
+    (list (getreturn classState)
+     newThrow (getcontinue classState) (getthrow classState)
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 (define setcontinue
-  (lambda (classState newReturn)
-    (newReturn
-     (getbreak classState) (getcontinue classState) (getthrow classState)
+  (lambda (classState newContinue)
+    (list (getreturn classState)
+     (getbreak classState) newThrow (getthrow classState)
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 (define setthrow
-  (lambda (classState newReturn)
-    (newReturn
-     (getbreak classState) (getcontinue classState) (getthrow classState)
+  (lambda (classState newThrow)
+    (list (getreturn classState)
+     (getbreak classState) (getcontinue classState) newThrow
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
+
+(define setclass
+  (lambda (classState newClass)
+    (list (getreturn classState)
+     (getbreak classState) (getcontinue classState) (getthrow classState)
+     newClass (getinstance classState) (getcurrentclass classState))))
+
+(define setinstance
+  (lambda (classState newInstance)
+    (list (getreturn classState)
+     (getbreak classState) (getcontinue classState) (getthrow classState)
+     (getclass classState) newInstance (getcurrentclass classState))))
+
+(define setcurrentclass
+  (lambda (classState newCurrentClass)
+    (list (getreturn classState)
+     (getbreak classState) (getcontinue classState) (getthrow classState)
+     (getclass classState) (getinstance classState) newCurrentClass)))
 
 ;a class consists of 1) name 2) who it extends 3) body
 (define classname cadr)
@@ -432,30 +450,24 @@
   (lambda (expression state classState)
     (if (null? expression)
         state
-        (addToFrontOfState (classname expression) class state))))
+        (addToFrontOfState (classname expression)
+                           (classProcessor (body expression) state (setclass  (createNewClass 
+                            state))))
 
-
-                           
-                           (classProcessor
-                            (body expression)
-                            state return break continue throw
-                            (createNewClass (extends expression) state)
-                            (createNewClass (extends expression) state)) state))))
-
+(define classProcessor
+  (lambda (expression state classState)
+    (cond
+      ((null? expression)))))
+                        
 (define getParent
   (lambda (inherits state)
     (if (null? inherits)
         'empty
         (searchInStateAllLayer inherits state))))
-      
-(define classProcessor
-  (lambda (expression state classState)
-    (cond
-      ((null? expression)))))
 
 (define createNewClass
   (lambda (classname parent)
-    (cons (parentfields parent) (cons (parentmethods parent) (cons (getParentname parent) '())))))
+    (list 'class parent classname  (getParentField parent) (getParentMethods parent) (getParentname parent))))
 
 (define parentfields cadddr)
 (define getParentField
@@ -464,19 +476,17 @@
         initialState
         (parentfields parent))))
 
-;(define parentmethods caddddr)
 (define getParentMethod
   (lambda (parent)
     (if (null? parent)
         initialState
-        (parentmethods parent))))
+        (cadr (cdddr parent)))))
 
-;(define parentname cadddddr)
 (define getParentname
   (lambda (parent)
     (if (null? parent)
         initialState
-        (parentname parent))))
+        (caddr (cdddr classState)))))
 
 (define 1stExpression car)
 (define restOfExpression cdr)
