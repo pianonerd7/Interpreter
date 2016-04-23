@@ -1,4 +1,5 @@
 (load "classParser.scm")
+
 ;Anna He jxh604
 ;Leah Platt lrp39		
 ;Haley Eisenshtadt hne3
@@ -34,65 +35,6 @@
 ;when a function is called M_state_fxncall gets the closure for the function, and binds the formal parameter and the
 ;arguments, create a new layer and append to the front of the state with the parameters in it. Then it calls run-state
 ;to process the body of the function
-(define newClass
-  (lambda (name body state)
-    (cond
-      ((null? body) state)
-      (else (addClassToFrontOfState (cons (list name) (list body)) state)))))
-
-(define getTopLayerClassName caar)
-(define getTopLayerClassBody cadar)
-(define getParentClass cddar)
-; Must pass in the BODY of the class to these functions
-; Use getTopLayerClassBody
-(define getInstanceFieldsAndValues
-  (lambda (body)
-    (getInstanceFieldsAndValues-acc '() (cadr body))))
-
-(define getInstanceFieldsAndValues-acc
-  (lambda (curr body)
-    (cond
-      ((or (null? body) (not (eq? (caar body) 'var))) curr)
-      (else (getInstanceFieldsAndValues-acc (cons (car body) curr) (cdr body))))))
-
-(define getInstanceFields
-  (lambda (body)
-    (getInstanceFields-acc '() (getInstanceFieldsAndValues body))))
-
-(define getInstanceFields-acc
- (lambda (curr body)
-   (cond
-     ((null? body) curr)
-     (else (getInstanceFields-acc (cons (cadar body) curr) (cdr body))))))
-
-; Be careful on the differences between these and the above methods
-; These are ONLY for instances
-(define getTrueType car)
-(define getInstanceFieldValues cdr)
-
-
-(define getInstanceValues
-  (lambda (body)
-    (getInstanceValues-acc '() (getInstanceFieldsAndValues body))))
-
-(define getInstanceValues-acc
- (lambda (curr body)
-   (cond
-     ((null? body) curr)
-     (else (getInstanceValues-acc (cons (caddar body) curr) (cdr body))))))
-
-
-(define getMethods
-  (lambda (body)
-    (getMethods-acc '() (cadr body))))
-; If this breaks in the future, try adding specific checks for static-function and function
-; This assumes that methods are the last thing you declare in your program
-(define getMethods-acc
-  (lambda (curr body)
-    (cond
-      ((null? body) curr)
-      ((eq? (caar body) 'var) (getMethods-acc curr (cdr body)))
-      (else (getMethods-acc (cons (car body) curr) (cdr body))))))
 (define M_state_fxncall
   (lambda (expression state rtn break continue throw)
     (call/cc
@@ -194,8 +136,14 @@
       ((eq? '/ (operator expression)) (quotient (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
       ((eq? '% (operator expression)) (remainder (M_value (leftOperand expression) state rtn break continue throw) (M_value (rightOperand expression) state rtn break continue throw)))
       ((eq? 'funcall (condition expression)) (M_state_fxncall expression state rtn break continue throw))
+      ((eq? 'dot (operator expression)) (M_state_dotOperator))
       (else (error 'unknown "unknown expression")))))
 
+(define M_state_dotOperator
+  (lambda (expression state rtn break continue throw instance currentclass class)
+    ()))
+
+   
 ;helper function to add another layer to the state
 (define addLayer cons)
 (define restOfStates cadr)
@@ -402,7 +350,6 @@
       ((not (list? (variables (topLayerState state)))) (cons (cons var (variables state)) (cons (cons (box value) (vals state)) '())))
       (else (cons (cons (cons var (variables (topLayerState state))) (cons (cons (box value) (vals (topLayerState state))) '())) (cons (restLayerState state) '()))))))
 
-(define addClassToFrontOfState cons)
 ;Cons an empty list to the state
 (define consEmptyListToState
   (lambda (state)
@@ -417,7 +364,9 @@
       (else 'no))))
 
 (define initialState '(()()))
-(define classInitialState '(()))
+(define initialClassState
+  (lambda (rtn)
+    (rtn default_break default_continue default_throw '() '() '())))
 
 ;default break
 (define default_break
@@ -432,27 +381,78 @@
 ;default throw
 (define default_throw
   (lambda (statment state)
-    (error "throw without catch")))
+    (error "throw without catch")))    
+
+;a class consists of 1) name 2) who it extends 3) body
+(define classname cadr)
+(define extends caddr)
+(define body cadddr)
+(define class_declaration
+  (lambda (expression state return break continue throw instance currentclass class)
+    (if (null? expression)
+        state
+        (addToFrontOfState (classname expression)
+                           (classProcessor
+                            (body expression)
+                            state return break continue throw
+                            (createNewClass (extends expression) state)
+                            (createNewClass (extends expression) state)) state))))
+
+(define getParent
+  (lambda (inherits state)
+    (if (null? inherits)
+        'empty
+        (searchInStateAllLayer inherits state))))
+      
+(define classProcessor
+  (lambda (expression state return break continue throw instance currentclass class)
+    (cond
+      ((null? expression)))))
+
+(define createNewClass
+  (lambda (classname parent)
+    (cons (parentfields parent) (cons (parentmethods parent) (cons (getParentname parent) '())))))
+
+(define parentfields cadddr)
+(define getParentField
+  (lambda (parent)
+    (if (null? parent)
+        initialState
+        (parentfields parent))))
+
+;(define parentmethods caddddr)
+(define getParentMethod
+  (lambda (parent)
+    (if (null? parent)
+        initialState
+        (parentmethods parent))))
+
+;(define parentname cadddddr)
+(define getParentname
+  (lambda (parent)
+    (if (null? parent)
+        initialState
+        (parentname parent))))
 
 (define 1stExpression car)
 (define restOfExpression cdr)
 ;Sends each chunk of code to M_state for computation. If a return statement is reached, it call/cc to here so that nothing else is executed
 (define evaluate
-  (lambda (expressions state return)
+  (lambda (expressions classname state return)
     (call/cc
      (lambda (rtn)
-       (letrec ((loop (lambda (expressions state)
+       (letrec ((loop (lambda (expressions state classState)
                         (cond
-                          ((null? expressions) (M_value '(funcall main) state return default_break default_continue default_throw))
-                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state rtn default_break default_continue default_throw)))))))
-         (loop expressions state))))))
+                          ((null? expressions) (M_value (cons (cons '(funcall dot) (cons classname '())) main) state return classState))
+                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state classState)))))))
+         (loop expressions state (initialClassState rtn)))))))
 
 ;Parses a file and sends to the evaluate function
 (define interpret
-  (lambda (filename)
+  (lambda (filename classname)
     (checkResult (call/cc
                   (lambda (return)
-                    (evaluate (parser filename) initialState return))))))
+                    (evaluate (parser filename) classname initialState return))))))
 
 ;converts the result to its corresponding boolean value if it exists
 (define checkResult
