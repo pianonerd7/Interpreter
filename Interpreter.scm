@@ -466,18 +466,17 @@
       ((null? expression) classState)
       ((eq? 'var (condition expression)) (MClass_declare expression state classState))
       ((eq? 'function (condition expression)) (MClass_declarefxn expression state classState))
-      ((eq? 'static-function (condition expression)) (Mclass_staticfunctionDeclare expression state classState))
+      ((eq? 'static-function (condition expression)) (MClass_declarestaticfxn expression state classState))
       (else (getclass classState)))))
 
-(define MClass_declarefxn
+(define expressionbody cadr)
+(define expressionArgs caddr)
+(define MClass_declare
   (lambda (expression state classState)
-    ()))
-      
-(define getParent
-  (lambda (inherits state)
-    (if (null? inherits)
-        'empty
-        (searchInStateAllLayer inherits state))))
+    (if (null? (isListNull expression))
+        (addToFrontOfState (variable expression) 'null state)
+        (assignValue-cps)
+    ((M_value (expressionArgs expression)))
 
 (define createNewClass
   (lambda (classname parent)
@@ -501,6 +500,30 @@
     (if (null? parent)
         initialState
         (caddr (cdddr classState)))))
+
+(define getparent cadr)
+(define getname caddr)
+(define getfields cadddr)
+
+(define getmethods
+  (lambda (class)
+    (cadr (cdddr class))))
+
+(define getclassinstance
+  (lambda (class)
+    (caddr (cdddr class))))
+
+(define setfields
+  (lambda (newFields class)
+    (list 'class (getparent class) (getname class) newFields (getmethods class) (getclassinstance class))))
+
+(define setmethods
+  (lambda (newMethods class)
+    (list 'class (getparent class) (getname class) (getfields class) newMethods (getclassinstance class))))
+
+(define setclassinstance
+  (lambda (newClassInstance class)
+    (list 'class (getparent class) (getname class) (getfields class) (getmethods class) newClassInstance)))
 
 (define 1stExpression car)
 (define restOfExpression cdr)
