@@ -381,17 +381,61 @@
 ;default throw
 (define default_throw
   (lambda (statment state)
-    (error "throw without catch")))    
+    (error "throw without catch")))
+
+(define getreturn car)
+(define getbreak cadr)
+(define getcontinue caddr)
+(define getthrow cadddr)
+
+(define getclass
+  (lambda (classState)
+    (cadr (cdddr classState))))
+
+(define getinstance
+  (lambda (classState)
+    (caddr (cdddr classState))))
+
+(define getcurrentclass
+  (lambda (classState)
+    (cadddr (cdddr classState))))
+
+(define setreturn
+  (lambda (classState newReturn)
+    (newReturn
+     (getbreak classState) (getcontinue classState) (getthrow classState)
+     (getclass classState) (getinstance classState) (getcurrentclass classState))))
+
+(define setbreak
+  (lambda (classState newReturn)
+    (newReturn
+     (getbreak classState) (getcontinue classState) (getthrow classState)
+     (getclass classState) (getinstance classState) (getcurrentclass classState))))
+
+(define setcontinue
+  (lambda (classState newReturn)
+    (newReturn
+     (getbreak classState) (getcontinue classState) (getthrow classState)
+     (getclass classState) (getinstance classState) (getcurrentclass classState))))
+
+(define setthrow
+  (lambda (classState newReturn)
+    (newReturn
+     (getbreak classState) (getcontinue classState) (getthrow classState)
+     (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 ;a class consists of 1) name 2) who it extends 3) body
 (define classname cadr)
 (define extends caddr)
 (define body cadddr)
 (define class_declaration
-  (lambda (expression state return break continue throw instance currentclass class)
+  (lambda (expression state classState)
     (if (null? expression)
         state
-        (addToFrontOfState (classname expression)
+        (addToFrontOfState (classname expression) class state))))
+
+
+                           
                            (classProcessor
                             (body expression)
                             state return break continue throw
@@ -405,7 +449,7 @@
         (searchInStateAllLayer inherits state))))
       
 (define classProcessor
-  (lambda (expression state return break continue throw instance currentclass class)
+  (lambda (expression state classState)
     (cond
       ((null? expression)))))
 
@@ -444,7 +488,7 @@
        (letrec ((loop (lambda (expressions state classState)
                         (cond
                           ((null? expressions) (M_value (cons (cons '(funcall dot) (cons classname '())) main) state return classState))
-                          (else (loop (restOfExpression expressions) (M_state(1stExpression expressions) state classState)))))))
+                          (else (loop (restOfExpression expressions) (class_declaration (1stExpression expressions) state classState) classState))))))
          (loop expressions state (initialClassState rtn)))))))
 
 ;Parses a file and sends to the evaluate function
