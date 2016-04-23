@@ -366,7 +366,7 @@
 (define initialState '(()()))
 (define initialClassState
   (lambda (rtn)
-    (rtn default_break default_continue default_throw '() '() '())))
+    (list rtn default_break default_continue default_throw '() '() '())))
 
 ;default break
 (define default_break
@@ -401,43 +401,43 @@
     (cadddr (cdddr classState))))
 
 (define setreturn
-  (lambda (classState newReturn)
+  (lambda (newReturn classState)
     (list newReturn
      (getbreak classState) (getcontinue classState) (getthrow classState)
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 (define setbreak
-  (lambda (classState newBreak)
+  (lambda (newBreak classState)
     (list (getreturn classState)
      newThrow (getcontinue classState) (getthrow classState)
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 (define setcontinue
-  (lambda (classState newContinue)
+  (lambda (newContinue classState)
     (list (getreturn classState)
      (getbreak classState) newThrow (getthrow classState)
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 (define setthrow
-  (lambda (classState newThrow)
+  (lambda (newThrow classState)
     (list (getreturn classState)
      (getbreak classState) (getcontinue classState) newThrow
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 (define setclass
-  (lambda (classState newClass)
+  (lambda (newClass classState)
     (list (getreturn classState)
      (getbreak classState) (getcontinue classState) (getthrow classState)
      newClass (getinstance classState) (getcurrentclass classState))))
 
 (define setinstance
-  (lambda (classState newInstance)
+  (lambda (newInstance classState)
     (list (getreturn classState)
      (getbreak classState) (getcontinue classState) (getthrow classState)
      (getclass classState) newInstance (getcurrentclass classState))))
 
 (define setcurrentclass
-  (lambda (classState newCurrentClass)
+  (lambda (newCurrentClass classState)
     (list (getreturn classState)
      (getbreak classState) (getcontinue classState) (getthrow classState)
      (getclass classState) (getinstance classState) newCurrentClass)))
@@ -451,14 +451,28 @@
     (if (null? expression)
         state
         (addToFrontOfState (classname expression)
-                           (classProcessor (body expression) state (setclass  (createNewClass 
+                           (classProcessor (body expression) state (setcurrentclass (createNewClass (classname expression) (extends expression)) (setclass (createNewClass (classname expression) (extends expression)) classState)))
                             state))))
 
 (define classProcessor
   (lambda (expression state classState)
     (cond
-      ((null? expression)))))
-                        
+      ((null? expression) classState)
+      (else (classProcessor (restOfExpression expression) state (setcurrentclass (MClass (1stExpression expression) state classState) (setclass (MClass_declare (1stExpression expression) state classState))))))))
+
+(define MClass
+  (lambda (expression state classState)
+    (cond
+      ((null? expression) classState)
+      ((eq? 'var (condition expression)) (MClass_declare expression state classState))
+      ((eq? 'function (condition expression)) (MClass_declarefxn expression state classState))
+      ((eq? 'static-function (condition expression)) (Mclass_staticfunctionDeclare expression state classState))
+      (else (getclass classState)))))
+
+(define MClass_declarefxn
+  (lambda (expression state classState)
+    ()))
+      
 (define getParent
   (lambda (inherits state)
     (if (null? inherits)
@@ -467,7 +481,7 @@
 
 (define createNewClass
   (lambda (classname parent)
-    (list 'class parent classname  (getParentField parent) (getParentMethods parent) (getParentname parent))))
+    (list 'class parent classname  (getParentField parent) (getParentMethod parent) (getParentname parent))))
 
 (define parentfields cadddr)
 (define getParentField
