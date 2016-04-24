@@ -37,6 +37,9 @@
 ;to process the body of the function
 (define M_state_fxncall
   (lambda (expression state classState)
+    ;(let* (
+     ;      (l (lookup-func (cadr expression) state classState))))
+           
     (call/cc
      (lambda (return)
            (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
@@ -474,7 +477,7 @@
     (if (null? (isListNull expression))
         (setclassinstance (addToFrontOfState (variable expression) 'null (getclassinstance (getclass classState))) (getclass classState))
         (setclassinstance (assignValue (variable expression)
-                                           (M_value (value expression) state (getreturn classState) (getbreak classState) (getcontinue classState) (getthrow classState))
+                                           (M_value (value expression) state classState)
                                            (addToFrontOfState (variable expression) 'null (getclassinstance (getclass classState)))) (getclass classState)))))
 
 (define name cadr)
