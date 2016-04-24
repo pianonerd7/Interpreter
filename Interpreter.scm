@@ -179,7 +179,7 @@
 
 (define lookupdottedexpression
   (lambda (expression state classState)
-    (lookupvariable (caddr expression) state (cadr (lookupdotlefthandclass (cadr expression) state classState)) (car (lookupdotlefthandclass (cadr expression) state classState)))))
+    (lookupvariable (caddr expression) initialState (cadr (lookupdotlefthandclass (cadr expression) state classState)) (car (lookupdotlefthandclass (cadr expression) state classState)))))
 
 ;helper function to add another layer to the state
 (define addLayer cons)
