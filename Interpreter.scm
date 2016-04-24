@@ -53,6 +53,7 @@
 (define lookupvariable
   (lambda (variablename state class instance)
     (cond
+      ((eq? 'this variablename) (box instance))
       ((not (eq? 'empty (searchInStateAllLayer variablename state))) (searchInStateAllLayer variablename state))
       ((not (eq? 'empty (searchInStateAllLayer variablename (list (car (getclassinstance class)) (caddr instance)))))
        (searchInStateAllLayer variablename (list (car (getclassinstance class)) (caddr instance))))
