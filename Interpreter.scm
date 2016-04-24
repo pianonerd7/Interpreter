@@ -477,6 +477,21 @@
                                            (M_value (value expression) state (getreturn classState) (getbreak classState) (getcontinue classState) (getthrow classState))
                                            (addToFrontOfState (variable expression) 'null (getclassinstance (getclass classState))) (lambda (v) v)) (getclass classState)))))
 
+(define name cadr)
+(define fxnparam caddr)
+(define fxnbody cadddr)
+(define MClass_declarestaticfxn
+  (lambda (expression state classState)
+    (setmethods (addToFrontOfState (name expression) (createFunctionEnvironment expression state classState) (getmethods (getclass classState))) (getclass classState))))
+
+(define createFunctionEnvironment
+  (lambda (expression state classState)
+    (list (fxnparam expression) (fxnbody expression)
+          (lambda (state)
+            (createEnvironment (getname (getclass classState)) state))
+          (lambda (state)
+            (searchInStateAllLayer state (getname (getclass classState)))))))
+
 (define createNewClass
   (lambda (classname parent)
     (list 'class parent classname  (getParentField parent) (getParentMethod parent) (getParentname parent))))
