@@ -3,7 +3,7 @@
 ;Anna He jxh604
 ;Leah Platt lrp39		
 ;Haley Eisenshtadt hne3
-;Interpreter 3
+;Interpreter 4
 
 (define condition car)
 (define body cdr)
@@ -37,27 +37,53 @@
 ;to process the body of the function
 (define M_state_fxncall
   (lambda (expression state classState)
-    ;(let* (
-     ;      (l (lookup-func (cadr expression) state classState))))
-           
     (call/cc
      (lambda (return)
-           (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
-                      (and (checkParameterLength (car (searchVariable (fxn_name expression) state (lambda (v) v))) (fxn_argVal expression))
-                           (fxncall_newstate (car (searchVariable (fxn_name expression) state (lambda (v) v)))
-                                             (formalToActualParam (fxn_argVal expression) state rtn break continue throw)
-                                             (addLayer initialState (consEmptyListToState ((caddr (searchVariable (fxn_name expression) state (lambda (v) v))) state)))))
-                      return break continue throw)))))
+       (run-state (cadr (car (lookupdotfxn (cadr expression) state classState)))
+                  (cons (paramprocessor (car (car (lookupdotfxn (cadr expression) state classState))) (cddr expression) state classState)
+                        ((caddr (car (lookupdotfxn (cadr expression) state classState))) state))
+                  (setclass
+                   (if (eq? 'null (cadr (lookupdotfxn (cadr expression) state classState)))
+                       ((cadddr (car (lookupdotfxn (cadr expression) state classState))) state)
+                       (caddr (lookupdotfxn (cadr expression) state classState)))
+                   (setreturn return (setbreak default_break (setinstance (cadr (lookupdotfxn (cadr expression) state classState))
+                                                                          (setcurrentclass ((cadddr (car (lookupdotfxn (cadr expression) state classState))) state)
+                                                                                           (setcontinue default_continue classState)))))))))))
 
-(define firstParameter car)
-(define restParameter cdr)
-;binds the actual parameters to the formal parameters
-;(x y z) --> (1 2 3)
-(define formalToActualParam
-  (lambda (formalParam state classState)
+(define lookupvariable
+  (lambda (variablename state class instance)
     (cond
-      ((null? formalParam) '())
-      (else (cons (M_boolean (firstParameter formalParam) state classStatew) (formalToActualParam (restParameter formalParam) state classState))))))
+      ((not (eq? 'empty (searchInStateAllLayer variablename state))) (searchInStateAllLayer variablename state))
+      ((not (eq? 'empty (searchInStateAllLayer variablename (list (car (getclassinstance class)) (caddr instance)))))
+       (searchInStateAllLayer variablename (list (car (getclassinstance class)) (caddr instance))))
+      (else (error "does not exist")))))
+
+(define getclassinstancepair
+  (lambda (variablename)
+    (if (eq? (car variablename) 'class)
+        (list 'null variablename)
+        (list variablename (cadr variablename)))))
+    
+(define findfxnfromstate
+  (lambda (variablename class state)
+    (if (not (eq? 'empty (searchInStateAllLayer variable state)))
+        (unbox (searchInStateAllLayer variable state))
+        (unbox (searchInStateAllLayer variablename (getmethods class))))))
+
+(define lookupdotlefthandclass
+  (lambda (classname state classState)
+      (getclassinstancepair (unbox (lookupvariable classname state (getclass classState) (getinstance classState))))))
+
+(define lookupdotfxn
+  (lambda (expression state classState)
+      (cons (findfxnfromstate (caddr expression) (cadr (lookupdotlefthandclass (cadr expression) state classState)) initialState) (lookupdotlefthandclass (cadr expression) state classState))))
+
+(define paramprocessor
+  (lambda (varlist vallist state classState)
+    (if (and (null? varlist) (null? vallist))
+        initialState
+        (addToFrontOfState (paramprocessor (cdr varlist) (cdr vallist) state classState)
+                       (car varlist) (box (M_value (car vallist) state classState))))))
 
 ;bind parameters with value to the front of the state
 (define fxncall_newstate
@@ -139,14 +165,22 @@
       ((eq? '/ (operator expression)) (quotient (M_value (leftOperand expression) state classState) (M_value (rightOperand expression) state classState)))
       ((eq? '% (operator expression)) (remainder (M_value (leftOperand expression) state classState) (M_value (rightOperand expression) state classState)))
       ((eq? 'funcall (condition expression)) (M_state_fxncall expression state classState))
-      ((eq? 'dot (operator expression)) (M_state_dotOperator))
+      ((eq? 'new (operator expression)) (M_state_newOperator (body expression) state classState))
+      ((eq? 'dot (operator expression)) (M_state_dotOperator expression state classState))
       (else (error 'unknown "unknown expression")))))
+
+(define M_state_newOperator
+  (lambda (expression state classState)
+    (list 'inst (cadr (list 'inst (unbox (searchInStateAllLayer (car expression) state)) '())) (cadr (getclassinstance (unbox (searchInStateAllLayer (car expression) state)))))))
 
 (define M_state_dotOperator
   (lambda (expression state classState)
-    ()))
+    (unbox (lookupdottedexpression expression state classState))))
 
-   
+(define lookupdottedexpression
+  (lambda (expression state classState)
+    (lookupvariable (caddr expression) state (cadr (lookupdotlefthandclass (cadr expression) state classState)) (car (lookupdotlefthandclass (cadr expression) state classState)))))
+
 ;helper function to add another layer to the state
 (define addLayer cons)
 (define restOfStates cadr)
@@ -316,6 +350,7 @@
   (lambda (name state)
     (cond
       ((null? state) 'empty)
+      ((eq? initialState state) 'empty)
       ((and (not(list? (ifValuesExists state))) (eq? 'empty (searchInStateTopLayer name state))) 'empty)
       ((not (list? (ifValuesExists state))) (searchInStateTopLayer name state))
       ((eq? 'empty (searchInStateTopLayer name (topLayerState state))) (searchInStateAllLayer name (removeFirstLayerFromState state)))
@@ -412,13 +447,13 @@
 (define setbreak
   (lambda (newBreak classState)
     (list (getreturn classState)
-     newThrow (getcontinue classState) (getthrow classState)
+     newBreak (getcontinue classState) (getthrow classState)
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 (define setcontinue
   (lambda (newContinue classState)
     (list (getreturn classState)
-     (getbreak classState) newThrow (getthrow classState)
+     (getbreak classState) newContinue (getthrow classState)
      (getclass classState) (getinstance classState) (getcurrentclass classState))))
 
 (define setthrow
@@ -448,13 +483,13 @@
 ;a class consists of 1) name 2) who it extends 3) body
 (define classname cadr)
 (define extends caddr)
-(define body cadddr)
+(define declarebody cadddr)
 (define class_declaration
   (lambda (expression state classState)
     (if (null? expression)
         state
         (addToFrontOfState (classname expression)
-                           (classProcessor (body expression) state (setcurrentclass (createNewClass (classname expression) (extends expression)) (setclass (createNewClass (classname expression) (extends expression)) classState)))
+                           (classProcessor (declarebody expression) state (setcurrentclass (createNewClass (classname expression) (extends expression)) (setclass (createNewClass (classname expression) (extends expression)) classState)))
                             state))))
 
 (define classProcessor
@@ -493,7 +528,7 @@
           (lambda (state)
             (createEnvironment (getname (getclass classState)) state))
           (lambda (state)
-            (searchInStateAllLayer state (getname (getclass classState)))))))
+            (unbox (searchInStateAllLayer (getname (getclass classState)) state))))))
 
 (define createNewClass
   (lambda (classname parent)
@@ -550,7 +585,7 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state classState)
                         (cond
-                          ((null? expressions) (M_value (append (cons 'funcall '()) (cons '(dot A main) '())) state classState))
+                          ((null? expressions) (M_value (append (cons 'funcall '()) (cons '(dot A main) '())) (cons state '()) classState))
                           (else (loop (restOfExpression expressions) (class_declaration (1stExpression expressions) state classState) classState))))))
          (loop expressions state (initialClassState rtn)))))))
 
