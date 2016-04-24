@@ -458,48 +458,46 @@
   (lambda (expression state classState)
     (cond
       ((null? expression) classState)
-      (else (classProcessor (restOfExpression expression) state (setcurrentclass (MClass (1stExpression expression) state classState) (setclass (MClass_declare (1stExpression expression) state classState))))))))
+      (else (classProcessor (restOfExpression expression) state (setcurrentclass (MClass (1stExpression expression) state classState) (setclass (MClass (1stExpression expression) state classState) classState)))))))
 
 (define MClass
   (lambda (expression state classState)
     (cond
       ((null? expression) classState)
-      ((eq? 'var (condition expression)) (MClass_declare expression state classState))
+      ((eq? 'var (condition expression)) (MClass_declare (cdr expression) state classState))
       ((eq? 'function (condition expression)) (MClass_declarefxn expression state classState))
       ((eq? 'static-function (condition expression)) (MClass_declarestaticfxn expression state classState))
       (else (getclass classState)))))
 
-(define expressionbody cadr)
-(define expressionArgs caddr)
 (define MClass_declare
   (lambda (expression state classState)
     (if (null? (isListNull expression))
-        (addToFrontOfState (variable expression) 'null state)
-        (assignValue-cps)
-    ((M_value (expressionArgs expression)))
+        (setclassinstance (addToFrontOfState (variable expression) 'null (getclassinstance (getclass classState))) (getclass classState))
+        (setclassinstance (assignValue-cps (variable expression)
+                                           (M_value (value expression) state (getreturn classState) (getbreak classState) (getcontinue classState) (getthrow classState))
+                                           (addToFrontOfState (variable expression) 'null (getclassinstance (getclass classState))) (lambda (v) v)) (getclass classState)))))
 
 (define createNewClass
   (lambda (classname parent)
     (list 'class parent classname  (getParentField parent) (getParentMethod parent) (getParentname parent))))
 
-(define parentfields cadddr)
 (define getParentField
   (lambda (parent)
     (if (null? parent)
         initialState
-        (parentfields parent))))
+        (getparent parent))))
 
 (define getParentMethod
   (lambda (parent)
     (if (null? parent)
         initialState
-        (cadr (cdddr parent)))))
+        (getmethods parent))))
 
 (define getParentname
   (lambda (parent)
     (if (null? parent)
         initialState
-        (caddr (cdddr classState)))))
+        (getclassinstance classState))))
 
 (define getparent cadr)
 (define getname caddr)
