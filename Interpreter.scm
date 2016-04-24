@@ -82,9 +82,8 @@
   (lambda (varlist vallist state classState)
     (if (and (null? varlist) (null? vallist))
         initialState
-        (addToFrontOfState (paramprocessor (cdr varlist) (cdr vallist) state classState)
-                       (car varlist) (box (M_value (car vallist) state classState))))))
-
+        (addToFrontOfState (car varlist) (box (M_value (car vallist) state classState)) (paramprocessor (cdr varlist) (cdr vallist) state classState)))))
+  
 ;bind parameters with value to the front of the state
 (define fxncall_newstate
   (lambda (var val state)
@@ -503,7 +502,7 @@
     (cond
       ((null? expression) classState)
       ((eq? 'var (condition expression)) (MClass_declare (cdr expression) state classState))
-      ((eq? 'function (condition expression)) (MClass_declarefxn expression state classState))
+      ((eq? 'function (condition expression)) (MClass_declarestaticfxn expression state classState))
       ((eq? 'static-function (condition expression)) (MClass_declarestaticfxn expression state classState))
       (else (getclass classState)))))
 
@@ -515,6 +514,10 @@
                                            (M_value (value expression) state classState)
                                            (addToFrontOfState (variable expression) 'null (getclassinstance (getclass classState)))) (getclass classState)))))
 
+(define MClass_declarefxn
+  (lambda (expression state classState)
+    (setmethods (addToFrontOfState ))))
+     
 (define name cadr)
 (define fxnparam caddr)
 (define fxnbody cadddr)
