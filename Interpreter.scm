@@ -12,7 +12,7 @@
 (define elseExec cadddr)
 ;M_state determines where to send expressions for execution
 (define M_state
-  (lambda (expression state rtn break continue throw)
+  (lambda (expression state rtn break continue throw classState)
     (cond
       ((null? expression) state)
       ((eq? 'var (condition expression)) (M_declare (body expression) state rtn break continue throw))
@@ -36,7 +36,7 @@
 ;arguments, create a new layer and append to the front of the state with the parameters in it. Then it calls run-state
 ;to process the body of the function
 (define M_state_fxncall
-  (lambda (expression state rtn break continue throw)
+  (lambda (expression state rtn break continue throw classState)
     (call/cc
      (lambda (return)
            (run-state (cadr (searchVariable (fxn_name expression) state (lambda (v) v)))
@@ -457,7 +457,7 @@
 (define classProcessor
   (lambda (expression state classState)
     (cond
-      ((null? expression) classState)
+      ((null? expression) (getclass classState))
       (else (classProcessor (restOfExpression expression) state (setcurrentclass (MClass (1stExpression expression) state classState) (setclass (MClass (1stExpression expression) state classState) classState)))))))
 
 (define MClass
@@ -547,7 +547,7 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state classState)
                         (cond
-                          ((null? expressions) (M_value (cons (cons '(funcall dot) (cons classname '())) main) state return classState))
+                          ((null? expressions) (M_value (append (cons 'funcall '()) (cons '(dot A main) '())) state return (getbreak classState) (getcontinue classState) (getthrow classState)))
                           (else (loop (restOfExpression expressions) (class_declaration (1stExpression expressions) state classState) classState))))))
          (loop expressions state (initialClassState rtn)))))))
 
