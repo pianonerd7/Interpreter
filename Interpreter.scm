@@ -82,8 +82,8 @@
   (lambda (varlist vallist state classState)
     (if (and (null? varlist) (null? vallist))
         initialState
-        (addToFrontOfState (car varlist) (box (M_value (car vallist) state classState)) (paramprocessor (cdr varlist) (cdr vallist) state classState)))))
-  
+        (addToFrontOfState (car varlist) (M_value (car vallist) state classState) (paramprocessor (cdr varlist) (cdr vallist) state classState)))))
+     
 ;bind parameters with value to the front of the state
 (define fxncall_newstate
   (lambda (var val state)
