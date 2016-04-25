@@ -617,8 +617,8 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state classState)
                         (cond
-                          ((null? expressions) (M_value (append (cons 'funcall '()) (cons '(dot A main) '())) (cons state '()) classState))
-                          (else (loop (restOfExpression expressions) (class_declaration (1stExpression expressions) state classState) classState))))))
+                           ((null? expressions) (M_value (append (cons 'funcall '()) (cons(list 'dot classname 'main) '())) (cons state '()) classState))
+                           (else (loop (restOfExpression expressions) (class_declaration (1stExpression expressions) state classState) classState))))))
          (loop expressions state (initialClassState rtn)))))))
 
 ;Parses a file and sends to the evaluate function
