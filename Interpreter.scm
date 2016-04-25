@@ -71,6 +71,30 @@
         (unbox (searchInStateAllLayer variable state))
         (unbox (searchInStateAllLayer variablename (getmethods class))))))
 
+(define searchreverseorder
+  (lambda (variable state)
+    (getatindex (traverse variable state) state)))
+
+(define getatindex
+  (lambda (index state)
+    (cond
+      ((null? state) 'empty)
+      ((eq? 1 index) (caadr state))
+      (else (getatindex (- index 1) (list (cdar state) (cdadr state)))))))
+       
+(define traverse
+  (lambda (var l)
+    (cond
+      ((null? l) 'empty)
+      ((eq? (caar l) var) (getindex (cadr l) 0))
+      (else (traverse var (list (cdar l) (cdadr l)))))))
+
+(define getindex
+  (lambda (list count)
+    (if (null? list)
+        count
+        (getindex (cdr list) (+ count 1)))))
+
 (define lookupdotlefthandclass
   (lambda (classname state classState)
       (getclassinstancepair (unbox (lookupvariable classname state (getclass classState) (getinstance classState))))))
