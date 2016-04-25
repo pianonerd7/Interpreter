@@ -553,7 +553,11 @@
 (define fxnbody cadddr)
 (define MClass_declarestaticfxn
   (lambda (expression state classState)
-    (setmethods (addToFrontOfState (name expression) (createFunctionEnvironment expression state classState) (getmethods (getclass classState))) (getclass classState))))
+    (setmethods (addInReverseOrder (name expression) (createFunctionEnvironment expression state classState) (getmethods (getclass classState))) (getclass classState))))
+
+(define addInReverseOrder
+  (lambda (variable value state)
+    (list (cons variable (car state)) (append (cadr state) (list (box value))))))
 
 (define createFunctionEnvironment
   (lambda (expression state classState)
