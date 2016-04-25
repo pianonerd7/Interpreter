@@ -27,7 +27,7 @@
       ((eq? 'throw (condition expression)) (M_state_throw expression state (getthrow classState)))
       ((eq? 'function (condition expression)) (M_declare_fxn expression state classState))
       ((eq? 'funcall (condition expression)) (begin (M_value expression state classState) state))
-      (else (M_boolean(expression) state classState)))))
+      (else (M_boolean expression state classState)))))
 
 (define fxn_body cadr)
 (define fxn_environment caddr)
@@ -101,7 +101,11 @@
 
 (define lookupdotfxn
   (lambda (expression state classState)
-      (cons (findfxnfromstate (caddr expression) (cadr (lookupdotlefthandclass (cadr expression) state classState)) initialState) (lookupdotlefthandclass (cadr expression) state classState))))
+    (cons (findfxnfromstate (caddr expression) (cadr (lookupdotlefthandclass (cadr expression) state classState)) initialState) (lookupdotlefthandclass (cadr expression) state classState))))
+
+(define lookupdotoperatorvariable
+  (lambda (expression state classState)
+    (lookupvariable (caddr expression) initialState (cadr (lookupdotlefthandclass (cadr expression) state classState)) (car (lookupdotlefthandclass (cadr expression) state classState)))))
 
 (define paramprocessor
   (lambda (varlist vallist state classState)
