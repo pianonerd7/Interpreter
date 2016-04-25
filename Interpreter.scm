@@ -563,9 +563,9 @@
 
 (define getParentname
   (lambda (parent state)
-    (if (null? parent)
-        initialState
-        (getclassinstance classState))))
+    ;(if (null? parent)
+        initialState))
+        ;(getclassinstance classState))))
 
 (define getparent cadr)
 (define getname caddr)
@@ -600,7 +600,8 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state classState)
                         (cond
-                          ((null? expressions) (M_value (append (cons 'funcall '()) (cons '(dot A main) '())) (cons state '()) classState))
+                          ;((null? expressions) (M_value (append (cons 'funcall '()) (cons '(dot A main) '())) (cons state '()) classState))
+                          ((null? expressions) (M_value (append (cons 'funcall '()) (list 'dot classname 'main)) (cons state '()) classState))
                           (else (loop (restOfExpression expressions) (class_declaration (1stExpression expressions) state classState) classState))))))
          (loop expressions state (initialClassState rtn)))))))
 
