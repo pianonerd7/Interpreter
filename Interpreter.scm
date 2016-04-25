@@ -225,7 +225,7 @@
 ;Calls on assignValue (which uses cps) to give a declared variable a value
 (define M_assignment
   (lambda (expression state classState)
-    (assignValue (variable expression) (M_value (value expression) state classState) state)))
+    (set-box! (lookupdotoperatorvariable (car expression) state classState) (M_value (cadr expression) state classState)) (M_value (cadr expression) state classState)))
 
 (define firstVar car)
 (define firstVal car)
@@ -517,7 +517,7 @@
     (if (null? expression)
         state
         (addToFrontOfState (classname expression)
-                           (classProcessor (declarebody expression) state (setcurrentclass (createNewClass (classname expression) (extends expression) state) (setclass (createNewClass (classname expression) (extends expression) state) classState)))
+                           (classProcessor (declarebody expression) state (setcurrentclass (createNewClass (classname expression) (extends expression)) (setclass (createNewClass (classname expression) (extends expression)) classState)))
                             state))))
 
 (define classProcessor
@@ -563,37 +563,26 @@
             (unbox (searchInStateAllLayer (getname (getclass classState)) state))))))
 
 (define createNewClass
-  (lambda (classname parent state)
-    (list 'class parent classname (getParentField parent state) (getParentMethod parent state) (getParentname parent state))))
+  (lambda (classname parent)
+    (list 'class parent classname  (getParentField parent) (getParentMethod parent) (getParentname parent))))
 
 (define getParentField
-  (lambda (parent state)
+  (lambda (parent)
     (if (null? parent)
         initialState
-        (getFieldsFromState (cdr parent) state))))
-(define getFieldsFromState 
-  (lambda (class state)
-   (if(null? class)
-      initialState
-      (getfields(unbox (searchInStateAllLayer (car class) state))))))
+        (getparent parent))))
 
 (define getParentMethod
-  (lambda (parent state)
+  (lambda (parent)
     (if (null? parent)
         initialState
-        (getMethodsFromState (cdr parent) state))))
-
-(define getMethodsFromState
-  (lambda(class state)
-    (if (null? class)
-        initailState
-        (getmethods(unbox (searchInStateAllLayer (car class) state))))))
+        (getmethods parent))))
 
 (define getParentname
-  (lambda (parent state)
-    ;(if (null? parent)
-        initialState))
-        ;(getclassinstance classState))))
+  (lambda (parent)
+    (if (null? parent)
+        initialState
+        (getclassinstance classState))))
 
 (define getparent cadr)
 (define getname caddr)
@@ -628,8 +617,7 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state classState)
                         (cond
-                          ;((null? expressions) (M_value (append (cons 'funcall '()) (cons '(dot A main) '())) (cons state '()) classState))
-                          ((null? expressions) (M_value (append (cons 'funcall '()) (list 'dot classname 'main)) (cons state '()) classState))
+                          ((null? expressions) (M_value (append (cons 'funcall '()) (cons '(dot A main) '())) (cons state '()) classState))
                           (else (loop (restOfExpression expressions) (class_declaration (1stExpression expressions) state classState) classState))))))
          (loop expressions state (initialClassState rtn)))))))
 
