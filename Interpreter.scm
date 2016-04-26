@@ -40,7 +40,7 @@
     (call/cc
      (lambda (return)
        (run-state (cadr (car (lookupdotfxn (cadr expression) state classState)))
-                  (cons (paramprocessor (car (car (lookupdotfxn (cadr expression) state classState))) (cddr expression) state classState)
+                  (list (paramprocessor (car (car (lookupdotfxn (cadr expression) state classState))) (cddr expression) state classState)
                         ((caddr (car (lookupdotfxn (cadr expression) state classState))) state))
                   (setclass
                    (if (eq? 'null (cadr (lookupdotfxn (cadr expression) state classState)))
