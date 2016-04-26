@@ -518,7 +518,7 @@
     (if (null? expression)
         state
         (addToFrontOfState (classname expression)
-                           (classProcessor (declarebody expression) state (setcurrentclass (createNewClass (classname expression) (extends expression)) (setclass (createNewClass (classname expression) (extends expression)) classState)))
+                           (classProcessor (declarebody expression) state (setcurrentclass (createNewClass (classname expression) (extends expression) state) (setclass (createNewClass (classname expression) (extends expression) state) classState)))
                             state))))
 
 (define classProcessor
@@ -568,26 +568,37 @@
             (unbox (searchInStateAllLayer (getname (getclass classState)) state))))))
 
 (define createNewClass
-  (lambda (classname parent)
-    (list 'class parent classname  (getParentField parent) (getParentMethod parent) (getParentname parent))))
+  (lambda (classname parent state)
+    (list 'class parent classname (getParentField parent state) (getParentMethod parent state) (getParentname parent state))))
 
 (define getParentField
-  (lambda (parent)
+  (lambda (parent state)
     (if (null? parent)
         initialState
-        (getparent parent))))
+        (getFieldsFromState (cdr parent) state))))
+(define getFieldsFromState 
+  (lambda (class state)
+   (if(null? class)
+      initialState
+      (getfields(unbox (searchInStateAllLayer (car class) state))))))
 
 (define getParentMethod
-  (lambda (parent)
+  (lambda (parent state)
     (if (null? parent)
         initialState
-        (getmethods parent))))
+        (getMethodsFromState (cdr parent) state))))
+
+(define getMethodsFromState
+  (lambda(class state)
+    (if (null? class)
+        initailState
+        (getmethods(unbox (searchInStateAllLayer (car class) state))))))
 
 (define getParentname
-  (lambda (parent)
-    (if (null? parent)
-        initialState
-        (getclassinstance classState))))
+  (lambda (parent state)
+    ;(if (null? parent)
+        initialState))
+        ;(getclassinstance classState))))
 
 (define getparent cadr)
 (define getname caddr)
@@ -622,7 +633,7 @@
      (lambda (rtn)
        (letrec ((loop (lambda (expressions state classState)
                         (cond
-                          ((null? expressions) (M_value (append (cons 'funcall '()) (cons '(dot A main) '())) (cons state '()) classState))
+                          ((null? expressions) (M_value (append (cons 'funcall '()) (cons(list 'dot classname 'main) '())) (cons state '()) classState))   
                           (else (loop (restOfExpression expressions) (class_declaration (1stExpression expressions) state classState) classState))))))
          (loop expressions state (initialClassState rtn)))))))
 
