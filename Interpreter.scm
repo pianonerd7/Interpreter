@@ -54,6 +54,8 @@
   (lambda (variablename state class instance)
     (cond
       ((eq? 'this variablename) (box instance))
+      ((eq? 'super variablename) (searchInStateAllLayer (cdr(getparent(unbox(searchInStateAllLayer class state)))) state))
+      ((eq? 'new  variablename) (M_state_newOperator (cdr variablename) state class))
       ((not (eq? 'empty (searchInStateAllLayer variablename state))) (searchInStateAllLayer variablename state))
       ((not (eq? 'empty (searchInStateAllLayer variablename (list (car (getclassinstance class)) (caddr instance)))))
        (searchreverseorder variablename (list (car (getclassinstance class)) (caddr instance))))
